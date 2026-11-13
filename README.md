@@ -13,6 +13,7 @@
 | **`双击我.bat`** | **一条命令都不用敲：双击 → 采集 → 桌面直接出现一份 html 报告并打开** |
 | **`一键运行.bat`** | **有 Node.js 时的另一条路：采集完自动开浏览器，报告直接显示** |
 | `start.mjs` | 上面那个 bat 背后做的事：占端口 → 跑 `collect.ps1` → 把数据注入页面 → 开浏览器 |
+| **`exe/`** | **编译成 exe 的全部源码：`KaiguangApp.cs`（WinForms 壳 + 内嵌资源 + 微型 HTTP 服务）+ `build-exe.ps1`（用 Windows 自带的 csc 编译，产物 105 KB）** |
 | `打开网页.bat` | 只打开网页看看（断网、没有 Node 也能用） |
 | `启动服务.bat` | 想用「AI 深读」时才需要（要 Node.js 和 API key） |
 | `make-report.ps1` | 把 `report.json` 和网页模板焊成一个独立 html（不联网） |
@@ -36,6 +37,18 @@
 装了 Node.js 的话还有一条更省事的路：**双击 `一键运行.bat`**，采集完浏览器自己弹出来，报告已经显示好了。
 
 全程不需要联网，不需要装任何东西，不需要管理员权限。
+
+## 编译成 exe（105 KB，双击即用）
+
+不想要文件夹、不想要 Node、不想要 bat：一个 exe 全包了。它把 index.html / style.css / rules.js / app.js / collect.ps1 全部嵌进自己里面，跑的时候解到临时目录，开一个只监听 127.0.0.1 的小服务，跑完把浏览器叫出来。
+
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\exe\build-exe.ps1
+
+产物在 `dist\开机第一天.exe`。不需要装 Visual Studio、不需要 .NET SDK——用的是系统里自带的 .NET Framework 4.8 编译器（Win10 1903 以后都有）。
+
+- **105 KB**：做参照，同样功能打 Electron 约 100 MB，Tauri 约 5 MB，Go + embed 约 7 MB。
+- 为什么这么小：.NET Framework 4.8 是系统组件，不跟着 exe 走；程序本体只有 ~15 KB 的 IL，剩下 90 KB 是内嵌的网页。
+- 代价：只能跑在 Windows 上（本来也只是 Windows 工具），首次运行可能被 SmartScreen 拦一次（没有代码签名）。
 
 ## 怎么跑（开发版）
 
