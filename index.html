@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>开机第一天 · 新电脑开荒</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <div class="logo">开</div>
+    <div>
+      <h1>开机第一天</h1>
+      <p class="sub">新电脑开荒 · 先体检，再决定装什么</p>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="badge">只读采集</span>
+    <span class="badge">不联网上传</span>
+    <span class="badge">脚本可审阅</span>
+  </div>
+</header>
+
+<main>
+  <!-- 上传区 -->
+  <section id="drop" class="drop">
+    <div class="drop-inner">
+      <div class="drop-icon">↓</div>
+      <h2>把 report.json 拖进来</h2>
+      <p>先下载 <a class="lnk" href="./collect.ps1" download>collect.ps1</a>，右键「使用 PowerShell 运行」一次，再把生成的 <code>report.json</code> 拖到这儿。</p>
+      <div class="drop-actions">
+        <label class="btn primary">
+          选择文件
+          <input id="file" type="file" accept=".json,application/json" hidden>
+        </label>
+        <button id="demo" class="btn ghost">载入示例（已用 79 天）</button>
+        <button id="demoNew" class="btn ghost">载入示例（刚开箱）</button>
+      </div>
+      <p class="tiny">所有分析都在你的浏览器里完成。除非你主动点「AI 深读」，否则数据不会离开这台电脑。</p>
+    </div>
+  </section>
+
+  <!-- 结果区 -->
+  <section id="result" class="hidden">
+
+    <div class="overview">
+      <div class="score-card">
+        <div class="score-label">开荒指数</div>
+        <div class="score" id="score">--</div>
+        <div class="score-hint" id="scoreHint"></div>
+      </div>
+      <div class="metrics">
+        <div class="metric"><span class="m-label">系统盘剩余</span><b id="m-disk">--</b></div>
+        <div class="metric"><span class="m-label">开机自启</span><b id="m-startup">--</b></div>
+        <div class="metric"><span class="m-label">第三方自启服务</span><b id="m-svc">--</b></div>
+        <div class="metric"><span class="m-label">已装软件</span><b id="m-apps">--</b></div>
+      </div>
+    </div>
+
+    <div class="machine" id="machine"></div>
+
+    <section class="block" id="checkBlock">
+      <div class="block-head">
+        <h2>验机</h2>
+        <span class="tiny">新机先验，再开荒</span>
+      </div>
+      <div id="verdict" class="verdict"></div>
+      <div id="vstats" class="vstats"></div>
+      <div class="vactions">
+        <button id="screenTest" class="btn ghost small">全屏查坏点 / 漏光</button>
+        <a class="btn ghost small" href="https://www.asus.com.cn/support/warranty-status/" target="_blank" rel="noreferrer">去官网查保修</a>
+        <span class="tiny">坏点检测：全屏循环纯色，靠近看，别靠猜。</span>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head">
+        <h2>体检报告</h2>
+        <div class="legend">
+          <span class="dot high"></span>要处理
+          <span class="dot warn"></span>建议看看
+          <span class="dot info"></span>知道就行
+          <span class="dot ok"></span>没问题
+        </div>
+      </div>
+      <div id="findings" class="findings"></div>
+    </section>
+
+    <section class="block">
+      <div class="block-head">
+        <h2>开荒单</h2>
+        <div class="profiles" id="profiles"></div>
+      </div>
+      <div id="plan" class="plan"></div>
+    </section>
+
+    <section class="block">
+      <div class="block-head">
+        <h2>可审阅脚本</h2>
+        <div class="script-actions">
+          <button id="copy" class="btn ghost small">复制</button>
+          <button id="download" class="btn ghost small">下载 .ps1</button>
+        </div>
+      </div>
+      <p class="note">下面每一行默认都是注释掉的。你逐条看，确认哪条要执行，再取消它前面的 <code>#</code>。我们不替你改系统。</p>
+      <pre id="script" class="script"></pre>
+    </section>
+
+    <div class="foot-actions">
+      <button id="reset" class="btn ghost">换一台电脑</button>
+      <button id="ai" class="btn primary">AI 深读（可选）</button>
+    </div>
+    <div id="aiOut" class="ai-out hidden"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>开机第一天 · 校园黑客松作品</span>
+  <span>只读采集 · 本地分析 · 脚本需你确认</span>
+</footer>
+
+<script src="rules.js"></script>
+<script src="sample.js"></script>
+<script src="sample-new.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
