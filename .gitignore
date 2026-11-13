@@ -2,5 +2,6 @@
 report.json
 我的电脑体检报告*.html
 _test/
+dist/
 node_modules/
 .DS_Store

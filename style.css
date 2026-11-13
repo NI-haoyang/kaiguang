@@ -142,5 +142,6 @@ h1{font-size:21px}
 }
 
 /* 首页里的脚本下载链接 */
+.kit{margin-top:16px;padding-top:14px;border-top:1px dashed #232b36;font-size:12.5px;color:var(--dim)}
 a.lnk{color:#3fd08a;text-decoration:none;border-bottom:1px solid rgba(63,208,138,.4)}
 a.lnk:hover{border-bottom-color:#3fd08a}
