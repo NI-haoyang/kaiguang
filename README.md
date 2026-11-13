@@ -28,7 +28,7 @@
 
 ## 怎么跑（给同学的版本）
 
-0. 下载[开荒工具包](https://github.com/NI-haoyang/kaiguang/releases/download/v0.1/kaiguang-kit-v0.1.zip)（35 KB），解压
+0. 下载[开荒工具包](https://github.com/NI-haoyang/kaiguang/releases/download/v0.1/kaiguang-kit-v0.1.zip)（39 KB），解压
 1. 双击 `双击我.bat`
 2. 等 30 秒，桌面出现 `我的电脑体检报告-日期.html`
 3. 双击那个 html 就能看。可以发微信、拷 U 盘、断网打开——它是独立的一个文件。
