@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开机第一天 · Agent</title>
+<style>
+:root{
+  --bg:#080b09; --panel:#0e1310; --panel2:#111815; --line:#1c2621; --line2:#27332c;
+  --text:#e8efea; --dim:#8a9a91; --dim2:#5f6f66;
+  --acc:#3ddc84; --acc2:#0f3a26; --warn:#f2c14e; --high:#ff6b6b; --blue:#5aa9f7;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  display:flex;flex-direction:column;overflow:hidden}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.brand{display:flex;gap:12px;align-items:center}
+.logo{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:19px;
+  color:#04150c;background:linear-gradient(160deg,#5ff0a0,#28c06e);box-shadow:0 6px 18px rgba(61,220,132,.22)}
+.top h1{margin:0;font-size:17px;letter-spacing:.5px}
+.top p{margin:1px 0 0;font-size:12px;color:var(--dim)}
+.pills{display:flex;gap:8px}
+.pill{font-size:12px;color:var(--dim);border:1px solid var(--line2);border-radius:999px;padding:4px 11px;background:var(--panel)}
+.pill.on{color:var(--acc);border-color:#1f4d36;background:#0d1f17}
+.pill.acc{color:#9fe8c0;border-color:#1f4d36}
+
+.grid{flex:1;display:grid;grid-template-columns:290px minmax(420px,1fr) 330px;gap:0;min-height:0}
+.col{padding:18px;overflow:auto;min-height:0}
+.left,.right{background:var(--panel);}
+.left{border-right:1px solid var(--line)}
+.right{border-left:1px solid var(--line)}
+.mid{display:flex;flex-direction:column;padding:0;overflow:hidden}
+
+.score-card{background:linear-gradient(170deg,#122019,#0d1411);border:1px solid var(--line2);border-radius:14px;padding:16px}
+.score-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim)}
+.tag{font-size:11px;padding:1px 8px;border-radius:999px;background:#132a1f;color:var(--acc);border:1px solid #1f4d36}
+.score{display:flex;align-items:baseline;gap:4px;margin:6px 0 2px}
+.score b{font:700 46px/1 var(--mono);color:var(--acc);letter-spacing:-2px}
+.score i{font-style:normal;font-size:13px;color:var(--dim)}
+.score-note{margin:6px 0 0;font-size:12.5px;color:var(--dim);line-height:1.6}
+
+.metrics{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel2)}
+.metric{display:flex;justify-content:space-between;padding:9px 13px;font-size:13px;border-bottom:1px solid var(--line)}
+.metric:last-child{border-bottom:0}
+.metric span{color:var(--dim)}
+.metric b{font-family:var(--mono);font-weight:600}
+
+.block{margin-top:18px}
+.block h2{font-size:12px;font-weight:600;color:var(--dim);letter-spacing:.6px;margin:0 0 9px;text-transform:uppercase}
+.hint{color:var(--dim2);font-weight:400;letter-spacing:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:3px 9px;border-radius:7px;border:1px solid var(--line2);color:var(--dim);background:var(--panel2)}
+.chip.high{color:#ffb4b4;border-color:#4a2222;background:#20100f}
+.chip.warn{color:#f7d894;border-color:#4a3d1c;background:#1d1808}
+.chip.ok{color:#9fe8c0;border-color:#1f4d36;background:#0d1f17}
+.muted{color:var(--dim2);font-size:12.5px}
+.small{font-size:11.5px;line-height:1.55}
+
+.verify{border:1px solid var(--line);border-radius:10px;padding:11px 12px;background:var(--panel2)}
+.verify.ok{border-color:#1f4d36}
+.verify.high{border-color:#4a2222}
+.verify.warn{border-color:#4a3d1c}
+.verify b{display:block;font-size:13px;margin-bottom:3px}
+.verify.ok b{color:var(--acc)} .verify.high b{color:#ff9d9d} .verify.warn b{color:var(--warn)}
+.verify p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
+
+.foot{margin:18px 0 0;font-size:11px;color:var(--dim2)}
+
+/* thread */
+.thread{flex:1;overflow:auto;padding:22px 26px 8px;scroll-behavior:smooth}
+.msg{display:flex;gap:10px;margin-bottom:18px;max-width:640px}
+.msg .av{flex:0 0 28px;height:28px;border-radius:9px;display:grid;place-items:center;font-size:12px;font-weight:700;
+  background:#12251b;color:var(--acc);border:1px solid #1f4d36}
+.msg .body{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:13.5px;line-height:1.72;white-space:pre-wrap}
+.msg.user{flex-direction:row-reverse;margin-left:auto}
+.msg.user .body{background:#10241a;border-color:#1f4d36;color:#d6f5e3}
+.msg.user .av{background:#1a2a22;color:#9fe8c0;border-color:#2a3c33}
+
+.opts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.opt{font-size:12.5px;padding:5px 12px;border-radius:999px;border:1px solid #2a3c33;background:#0f1a15;color:#c9e8d8;cursor:pointer;transition:.15s}
+.opt:hover{border-color:var(--acc);color:var(--acc);background:#10241a}
+
+/* cards */
+.cards{display:flex;flex-direction:column;gap:10px;margin:4px 0 20px 38px;max-width:640px}
+.card{border:1px solid var(--line2);border-radius:12px;background:var(--panel2);padding:12px 14px;transition:.18s;position:relative}
+.card.pick{border-color:#2f6b4a;background:#0f1c15}
+.card .row{display:flex;gap:10px;align-items:flex-start}
+.box{flex:0 0 17px;width:17px;height:17px;margin-top:2px;border-radius:5px;border:1.5px solid #3a4a42;background:#0b1210;cursor:pointer;display:grid;place-items:center;transition:.15s}
+.card.pick .box{background:var(--acc);border-color:var(--acc)}
+.card.pick .box::after{content:"";width:9px;height:5px;border-left:2px solid #05170d;border-bottom:2px solid #05170d;transform:rotate(-45deg) translateY(-1px)}
+.card.link .box{display:none}
+.card h3{margin:0;font-size:13.5px;font-weight:600}
+.card p{margin:5px 0 0;font-size:12.5px;color:var(--dim);line-height:1.62}
+.meta{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.badge{font-size:11px;padding:1.5px 8px;border-radius:6px;border:1px solid #24322b;color:#8fb8a1;background:#0d1712}
+.badge.rev{color:var(--acc);border-color:#1f4d36;background:#0d1f17}
+.badge.warn{color:var(--warn);border-color:#4a3d1c;background:#1d1808}
+.card.done{opacity:.9;border-color:#1f4d36}
+.card.fail{border-color:#4a2222;background:#150e0e}
+.status{font-size:12px;margin-top:8px;color:var(--dim)}
+.status.ok{color:var(--acc)} .status.err{color:#ff9d9d}
+.linkbtn{font-size:12px;padding:3px 10px;border-radius:7px;border:1px solid #2a3c33;background:#0f1a15;color:#c9e8d8;cursor:pointer;margin-top:9px}
+.linkbtn:hover{border-color:var(--acc);color:var(--acc)}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid #2a3c33;border-top-color:var(--acc);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.actionbar{display:flex;gap:10px;align-items:center;margin:0 0 16px 38px;max-width:640px}
+.btn{border:1px solid var(--line2);background:var(--panel2);color:var(--text);border-radius:9px;padding:8px 16px;font-size:13px;cursor:pointer;transition:.15s;font-family:inherit}
+.btn:hover{border-color:#3a4a42}
+.btn.primary{background:linear-gradient(160deg,#5ff0a0,#28c06e);color:#04150c;border:0;font-weight:600;box-shadow:0 5px 16px rgba(61,220,132,.18)}
+.btn.primary:disabled{opacity:.45;box-shadow:none;cursor:not-allowed}
+.btn.ghost{background:transparent}
+.btn.sm{padding:4px 11px;font-size:12px}
+
+.composer{display:flex;gap:10px;padding:14px 26px 16px;border-top:1px solid var(--line);background:#0a0f0c}
+.composer input{flex:1;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:11px 14px;color:var(--text);font-size:13.5px;font-family:inherit;outline:none}
+.composer input:focus{border-color:#2f6b4a}
+
+/* log */
+.log{display:flex;flex-direction:column;gap:9px}
+.entry{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--panel2);font-size:12.5px}
+.entry .t{font-family:var(--mono);font-size:11px;color:var(--dim2)}
+.entry .n{display:flex;justify-content:space-between;gap:8px;margin-top:2px}
+.entry .n b{font-weight:600;font-size:12.5px;color:var(--text)}
+.entry .d{color:var(--dim);font-size:11.5px;margin-top:3px;line-height:1.55}
+.entry.ok{border-color:#1f4d36}
+.entry.bad{border-color:#4a2222}
+.entry .undo{font-size:11px;color:var(--acc);cursor:pointer;border:1px solid #1f4d36;border-radius:6px;padding:1px 7px;background:#0d1f17;white-space:nowrap}
+.entry .undone{font-size:11px;color:var(--dim2)}
+.orig{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.orig .o{font-family:var(--mono);font-size:11px;color:#7fae94;background:#0b1210;border:1px solid var(--line);border-radius:6px;padding:5px 8px;word-break:break-all;line-height:1.5}
+
+/* scanning */
+.scan{max-width:560px;margin:40px auto;padding:0 8px}
+.scan h2{font-size:16px;margin:0 0 6px}
+.scan .steps{margin-top:18px;display:flex;flex-direction:column;gap:9px}
+.step{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--dim2);transition:.2s}
+.step .dot{width:16px;height:16px;border-radius:50%;border:1.5px solid #2a3c33;display:grid;place-items:center;flex:0 0 16px}
+.step.on{color:var(--text)}
+.step.on .dot{border-color:var(--acc)}
+.step.on .dot::after{content:"";width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.step.ok{color:#9fe8c0}
+.step.ok .dot{border-color:var(--acc);background:var(--acc)}
+.step.ok .dot::after{content:"";width:8px;height:4px;border-left:2px solid #05170d;border-bottom:2px solid #05170d;transform:rotate(-45deg)}
+.empty{max-width:560px;margin:56px auto;padding:0 8px;text-align:center}
+.empty h2{font-size:20px;margin:0 0 8px}
+.empty p{color:var(--dim);font-size:13.5px;max-width:420px;margin:0 auto 22px;line-height:1.7}
+.big{font-size:14px;padding:12px 26px}
+
+/* Electron 桌面壳：窗口无边框，头部当拖动手柄，右侧留出系统按钮的位置 */
+body.desktop .top{-webkit-app-region:drag;padding-right:150px}
+body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
+.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
+.demo-bar b{font-weight:700}
+.demo-bar span{opacity:.78}
+</style>
+</head>
+<body><div class="demo-bar"><b>静态演示</b><span>动作都是模拟的，不会碰你的电脑；能真动手、能撤销的是桌面版，见 Releases</span></div>
+<header class="top">
+  <div class="brand">
+    <span class="logo">开</span>
+    <div>
+      <h1>开机第一天</h1>
+      <p>新电脑开荒 · 先体检，再决定装什么</p>
+    </div>
+  </div>
+  <div class="pills">
+    <span class="pill" id="pillScan">未体检</span>
+    <span class="pill" id="pillAI">AI 未连接</span>
+    <span class="pill acc">动作可撤销</span>
+  </div>
+</header>
+
+<main class="grid">
+  <!-- 左：诊断 -->
+  <aside class="col left">
+    <section class="score-card" id="scoreCard">
+      <div class="score-head"><span>开荒指数</span><span class="tag" id="scoreVerdictTag">待体检</span></div>
+      <div class="score"><b id="score">--</b><i>分</i></div>
+      <p class="score-note" id="scoreNote">先跑一遍体检，拿到这台机器的真实数字。</p>
+    </section>
+
+    <section class="metrics" id="metrics"></section>
+
+    <section class="block">
+      <h2>需要处理</h2>
+      <div class="chips" id="chips"><span class="muted">—</span></div>
+    </section>
+
+    <section class="block">
+      <h2>验机</h2>
+      <div class="verify" id="verify"><p class="muted">还没验。</p></div>
+    </section>
+
+    <p class="foot">只读采集 · 本地分析 · 每步可撤销</p>
+  </aside>
+
+  <!-- 中：对话 -->
+  <section class="col mid">
+    <div class="thread" id="thread"></div>
+    <div class="composer">
+      <input id="input" type="text" placeholder="跟它说一句，或者点上面的选项" autocomplete="off">
+      <button id="send" class="btn primary">发送</button>
+    </div>
+  </section>
+
+  <!-- 右：执行日志 -->
+  <aside class="col right">
+    <section class="block">
+      <h2>执行日志 <span class="hint" id="logCount"></span></h2>
+      <div class="log" id="log"><p class="muted">还没有执行任何动作。</p></div>
+    </section>
+    <section class="block">
+      <h2>原值记录</h2>
+      <p class="muted small" id="origNote">执行前会先把原值记下来。撤销就是把原值写回去。</p>
+      <div class="orig" id="orig"></div>
+    </section>
+    <p class="foot">失败即停 · 每一步都留痕</p>
+  </aside>
+</main>
+
+<script>
+/* 静态演示用的假后端：动作全是模拟的，不碰用户的电脑。由 tools/build-agent-demo.mjs 内联进页面。 */
+const DATA = {"report":{"counts":{"apps":76,"startup":10,"services":23},"machine":"FRANKNI","system":{"osName":"Microsoft Windows 11 家庭版 中文版","osBuild":"26200","arch":"64 位","installedAt":null,"lastBoot":null,"manufacturer":"ASUS","model":"TX Gaming FX608LMG","ramGB":15.4,"cpu":"Intel(R) Core(TM) Ultra 7 251HX","cpuCores":18,"cpuThreads":18}},"analysis":{"score":70,"findings":[{"level":"high","tone":"info","id":"firewall_off","title":"防火墙关着：Private、Public 网络","detail":"在宿舍、咖啡店这类公共 Wi-Fi 下，防火墙是挡住局域网扫描的第一道门。关掉它通常是装某个软件时被引导关的，之后就忘了开回来。","fix":"设置 → 隐私和安全性 → Windows 安全中心 → 防火墙和网络保护，把「专用」和「公用」都打开。","action":"open_settings","args":{"uri":"ms-settings:windowsdefender"},"badge":"带到设置页","cta":"打开设置页"},{"level":"warn","tone":"warn","id":"av_overlap","title":"同时装了 2 套安全/管家软件","detail":"两套以上的实时防护会互相把对方扫一遍，文件操作明显变慢，还容易出现「一个拦一个」的弹窗打架。Windows 只需要一套实时防护。","fix":"只留一套（火绒这类轻量的就够），其余卸载干净，重启后再看安全中心有没有恢复正常。","items":["火绒安全软件","迈克菲联网顾问"]},{"level":"ok","tone":"ok","id":"startup_ok","title":"开机自启 10 个，不多","detail":"这个数量在正常范围。"},{"level":"info","tone":"info","id":"svc_many","title":"23 个第三方服务开机自启","detail":"这些不是病毒，是厂商为了让「功能随时可用」装的常驻服务。代价是内存和后台唤醒。"},{"level":"ok","tone":"ok","id":"disk_ok","title":"C: 空间健康（剩 46%，191.6 GB）","detail":"系统盘保持 20% 以上余量，更新和虚拟内存都不会卡。"},{"level":"warn","tone":"warn","id":"dup_office","title":"装了 3 个办公套件","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["微软OfficePLUS","Microsoft 365 - zh-cn","WPS Office (12.1.0.29690)"],"catId":"office"},{"level":"info","tone":"info","id":"dup_browser","title":"装了 3 个浏览器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["Google Chrome","Microsoft Edge","夸克"],"catId":"browser"},{"level":"info","tone":"info","id":"dup_video","title":"装了 3 个视频客户端","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["哔哩哔哩","腾讯视频","抖音"],"catId":"video"},{"level":"info","tone":"info","id":"dup_accel","title":"装了 3 个网络/游戏加速器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["FlClash 版本 0.9.1+2026101702","UU加速器","迅游加速器"],"catId":"accel"},{"level":"info","tone":"info","id":"oem_bloat","title":"品牌预装组件 12 个","detail":"整机厂为了灯效、风扇曲线、投屏、桌宠装了一整套。功能是真的，但没必要全部开机就运行。","items":["Armoury Crate Service","ASUS Hotplug Controller","ROG Live Service","ASUS MS Control","GlideX Service Installer","AURA lighting effect add-on x64","ASUS Monitor Control","AURA Service","AURA lighting effect add-on","ROG FALCHION ACE HFX","ASUS Framework Service","ASUS Smart Display Control"]},{"level":"info","tone":"info","id":"secureboot_off","title":"安全启动是关的","detail":"关掉通常是为了装双系统或某些驱动。日常使用开着更安全，但它不影响开荒，先记一笔。"}],"counts":{"high":1,"warn":2,"info":6},"verify":{"tone":"high","title":"这台不是刚拆封的机器","detail":"系统装好 80 天，电池健康 98%。如果你是按新机买的，值得确认一下是不是样机或退换机。"},"metrics":{"freePct":46,"battHealth":98,"days":80}},"greet":{"say":"体检完了。这台是 ASUS TX Gaming FX608LMG，Windows 11 家庭版 中文版，装了 76 个软件——其中华硕自己就占了 12 个。C: 盘还剩 46%，这块不用管。","ask":{"question":"先问一句：这台主要拿来干嘛？","chips":["学习为主","打游戏","剪视频 / 做设计","写代码","什么都干"]}},"ask2":{"say":"明白。第二个问题跟你手上的软件有关：你现在有三个办公套件——微软OfficePLUS、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690)。三个都装着，每次打开文档它们都在抢「默认打开方式」。","ask":{"question":"留哪个？","chips":["留 WPS","留 Office","都留着，别动"]}},"variants":{"wps":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"微软OfficePLUS"},"title":"卸载 微软OfficePLUS","why":"保留 WPS Office (12.1.0.29690) 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 WPS Office (12.1.0.29690) 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]},"office":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"WPS Office (12.1.0.29690)"},"title":"卸载 WPS Office (12.1.0.29690)","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]},"keep":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"WPS Office (12.1.0.29690)"},"title":"卸载 WPS Office (12.1.0.29690)","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]}}};
+const STEP_LABELS = ['读系统与硬件','看磁盘空间','数一遍装了多少软件','检查开机自启','看后台服务','查防火墙和防护状态','验机：电池、硬盘、安装天数','整理成报告'];
+const SIM = { journal: [], step: 0, lines: [], running: false, reported: false, started: 0 };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let seq = 0;
+
+function detailOf(action) {
+  if (action === 'disable_startup') {
+    return { ok: true, detail: '已关闭（原条目还在注册表里，只是不启动了）', ms: 820, revert: { kind: 'reg', name: 'TX Mascot', value: 'C:\\Program Files\\ASUS\\TXMascot.exe' } };
+  }
+  return { ok: true, detail: '已卸载，需要时可以装回来', ms: 12400, revert: { kind: 'pkg', id: 'demo-pkg', value: 'winget install --id <演示包>' } };
+}
+
+const lastRun = {};
+function execCard(card) {
+  const key = card.action + '|' + card.title;
+  const since = lastRun[key];
+  if (since && Date.now() - since < 1500) {
+    const dup = SIM.journal.filter((e) => e.action === card.action && e.title === card.title).pop();
+    if (dup) return { ok: dup.ok, detail: dup.detail, ms: 120, entry: null };
+  }
+  lastRun[key] = Date.now();
+  const d = detailOf(card.action);
+  const entry = { id: 'demo' + (++seq), ts: Date.now(), action: card.action, title: card.title, ok: d.ok, detail: d.detail, revert: d.revert };
+  SIM.journal.push(entry);
+  return { ok: d.ok, detail: d.detail, ms: d.ms, entry };
+}
+
+window.fetch = async (url, opt) => {
+  const p = String(url);
+  const body = opt && opt.body ? JSON.parse(opt.body) : {};
+  const j = (obj) => ({ ok: true, status: 200, json: async () => obj });
+
+  if (p === '/api/state') {
+    return j({ ai: false, scanning: SIM.running, ready: SIM.reported, report: SIM.reported ? DATA.report : null, analysis: SIM.reported ? DATA.analysis : null, journal: SIM.journal.slice() });
+  }
+  if (p === '/api/scan') {
+    if (!SIM.running && !SIM.reported) {
+      SIM.running = true; SIM.lines = []; SIM.started = Date.now();
+      setTimeout(() => { SIM.reported = true; SIM.running = false; }, 2600);
+    }
+    return j({ ok: true });
+  }
+  if (p === '/api/scan/status') {
+    if (SIM.running) {
+      const n = Math.min(STEP_LABELS.length, Math.floor((Date.now() - SIM.started) / 320));
+      SIM.lines = STEP_LABELS.slice(0, n);
+    }
+    return j({ running: SIM.running, lines: SIM.lines, error: null, ready: SIM.reported });
+  }
+  if (p === '/api/chat') {
+    const text = String(body.text || '');
+    if (!text) { SIM.step = 1; return j(DATA.greet); }
+    if (SIM.step <= 1) { SIM.step = 2; return j(DATA.ask2); }
+    if (SIM.step === 2) {
+      SIM.step = 3;
+      const v = /wps/i.test(text) ? 'wps' : /office|365/i.test(text) ? 'office' : 'keep';
+      return j(DATA.variants[v]);
+    }
+    return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。' });
+  }
+  if (p === '/api/execute') return j(execCard(body.card || {}));
+  if (p === '/api/undo') {
+    const e = SIM.journal.find((x) => x.id === body.id);
+    if (e) e.undone = true;
+    await sleep(180);
+    return j({ ok: true, detail: '已恢复原样', ms: 210 });
+  }
+  if (p === '/api/journal') return j({ entries: SIM.journal.slice() });
+  if (p === '/api/open') return j({ ok: true, uri: body.uri });
+  if (p === '/api/settings') return j({ ok: true, hasKey: false, model: 'deepseek-flash' });
+  return j({});
+};
+
+window.addEventListener('load', () => {
+  const pill = document.querySelector('#pillAI');
+  if (pill) {
+    pill.textContent = '静态演示';
+    pill.title = '网页上的静态演示：动作是模拟的，不会碰你的电脑。';
+    pill.style.cursor = 'default';
+    pill.onclick = null;
+  }
+});
+
+</script>
+<script>
+if (window.kgDesktop) document.body.classList.add('desktop');
+const $ = (s) => document.querySelector(s);
+const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
+
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false };
+
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.detail || j.error || ('HTTP ' + r.status));
+  return j;
+}
+
+/* ---------------- 左栏 ---------------- */
+function renderLeft() {
+  const a = S.analysis;
+  if (!a) return;
+  $('#score').textContent = a.score;
+  $('#scoreVerdictTag').textContent = a.score >= 80 ? '基本干净' : a.score >= 60 ? '有几处要动手' : '问题偏多';
+  $('#scoreNote').textContent = a.counts.high ? '有 ' + a.counts.high + ' 处「要处理」，其余是可选。' : '没有硬伤，剩下的都是可选项。';
+
+  const m = $('#metrics');
+  m.innerHTML = '';
+  const rows = [
+    ['C: 盘剩余', a.metrics.freePct != null ? a.metrics.freePct + '%' : '—'],
+    ['开机自启', (S.report.counts.startup) + ' 个'],
+    ['第三方服务', (S.report.counts.services) + ' 个'],
+    ['已装软件', S.report.counts.apps + ' 个'],
+  ];
+  for (const [k, v] of rows) {
+    const r = el('div', 'metric');
+    r.append(el('span', null, k), el('b', null, v));
+    m.append(r);
+  }
+
+  const chips = $('#chips');
+  chips.innerHTML = '';
+  const key = a.findings.filter(f => ['high', 'warn', 'info'].includes(f.level)).slice(0, 6);
+  if (!key.length) chips.append(el('span', 'muted', '没什么要处理的。'));
+  for (const f of key) {
+    const c = el('span', 'chip ' + (f.level === 'high' ? 'high' : f.level === 'warn' ? 'warn' : ''));
+    c.textContent = f.title.replace(/：.*$/, '').slice(0, 18);
+    chips.append(c);
+  }
+
+  const v = a.verify;
+  const box = $('#verify');
+  box.className = 'verify ' + (v.tone || '');
+  box.innerHTML = '';
+  box.append(el('b', null, v.title), el('p', null, v.detail));
+
+  $('#pillScan').textContent = '已体检';
+  $('#pillScan').classList.add('on');
+}
+
+function renderLog() {
+  const box = $('#log');
+  box.innerHTML = '';
+  if (!S.journal.length) { box.append(el('p', 'muted', '还没有执行任何动作。')); $('#logCount').textContent = ''; return; }
+  $('#logCount').textContent = S.journal.length + ' 条';
+  for (const e of S.journal.slice().reverse()) {
+    const box2 = el('div', 'entry ' + (e.ok ? 'ok' : 'bad'));
+    const t = new Date(e.ts);
+    box2.append(el('div', 't', t.toTimeString().slice(0, 8)));
+    const row = el('div', 'n');
+    row.append(el('b', null, e.title || e.action));
+    if (e.revert && !e.undone) {
+      const u = el('span', 'undo', '撤销');
+      u.onclick = () => undo(e.id, u);
+      row.append(u);
+    } else if (e.undone) row.append(el('span', 'undone', '已撤销'));
+    box2.append(row, el('div', 'd', e.detail || ''));
+    box.append(box2);
+  }
+  const orig = $('#orig');
+  orig.innerHTML = '';
+  for (const e of S.journal) {
+    if (e.revert && e.revert.kind === 'reg') orig.append(el('div', 'o', e.revert.name + ' → ' + e.revert.value));
+  }
+  $('#origNote').textContent = S.journal.some(e => e.revert) ? '这些是改动前的原值。撤销就是把它们写回去。' : '执行前会先把原值记下来。撤销就是把原值写回去。';
+}
+
+/* ---------------- 对话 ---------------- */
+function scroll() { const t = $('#thread'); t.scrollTop = t.scrollHeight; }
+
+function bubble(role, text) {
+  const m = el('div', 'msg ' + (role === 'user' ? 'user' : ''));
+  m.append(el('div', 'av', role === 'user' ? '你' : '开'));
+  const b = el('div', 'body', text);
+  m.append(b);
+  $('#thread').append(m);
+  scroll();
+  return m;
+}
+
+function chips(list, onClick) {
+  const box = el('div', 'opts');
+  for (const c of list) {
+    const o = el('span', 'opt', c);
+    o.onclick = () => { box.remove(); onClick(c); };
+    box.append(o);
+  }
+  return box;
+}
+
+function send(text) {
+  if (S.busy || !text.trim()) return;
+  $('#input').value = '';
+  bubble('user', text);
+  S.busy = true;
+  api('/api/chat', { text }).then(out => {
+    const m = bubble('ai', out.say);
+    if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || ['好', '不用了'], send));
+    if (out.cards) renderCards(out.cards);
+  }).catch(e => bubble('ai', '出错了：' + e.message)).finally(() => { S.busy = false; });
+}
+
+/* ---------------- 卡片 ---------------- */
+function renderCards(cards) {
+  S.cards = cards; S.picked = new Set();
+  const wrap = el('div', 'cards');
+  if (!cards.length) {
+    wrap.append(el('p', 'muted', '按你的数据，没有值得动的地方。'));
+    $('#thread').append(wrap); scroll(); return;
+  }
+  cards.forEach((c, i) => {
+    const isLink = c.action === 'open_settings';
+    const box = el('div', 'card' + (isLink ? ' link' : '') + (isLink ? '' : ' pick'));
+    const row = el('div', 'row');
+    if (!isLink) {
+      const pick = el('div', 'box');
+      pick.onclick = () => {
+        if (S.picked.has(i)) { S.picked.delete(i); box.classList.remove('pick'); }
+        else { S.picked.add(i); box.classList.add('pick'); }
+        syncBar();
+      };
+      S.picked.add(i);
+      row.append(pick);
+    }
+    const main = el('div');
+    main.append(el('h3', null, c.title), el('p', null, c.why));
+    const meta = el('div', 'meta');
+    meta.append(el('span', 'badge ' + (isLink ? 'warn' : 'rev'), c.badge));
+    if (!isLink) meta.append(el('span', 'badge', '不需要管理员'));
+    main.append(meta);
+    if (isLink) {
+      const b = el('button', 'linkbtn', '打开设置页');
+      b.onclick = () => api('/api/open', { uri: c.target.uri }).then(() => {
+        b.textContent = '已打开'; b.disabled = true;
+        S.journal.unshift({ id: 'local' + Date.now(), ts: Date.now(), action: 'open_settings', title: c.title, ok: true, detail: '设置页已打开，等你点完', revert: null });
+        renderLog();
+      });
+      main.append(b);
+    }
+    row.append(main);
+    box.append(row);
+    wrap.append(box);
+    c._el = box;
+  });
+
+  const bar = el('div', 'actionbar');
+  bar.id = 'bar';
+  const go = el('button', 'btn primary', '执行选中的 0 项');
+  go.id = 'go';
+  go.onclick = executeSelected;
+  bar.append(go);
+  wrap.append(bar);
+  $('#thread').append(wrap);
+  scroll();
+  syncBar();
+}
+
+function syncBar() {
+  const go = $('#go');
+  if (!go) return;
+  go.textContent = '执行选中的 ' + S.picked.size + ' 项';
+  go.disabled = S.picked.size === 0;
+}
+
+async function executeSelected() {
+  if (S.busy) return;
+  S.busy = true;
+  const go = $('#go');
+  go.disabled = true;
+  const list = [...S.picked].map(i => S.cards[i]).filter(Boolean);
+  let ok = 0, bad = 0;
+  for (const c of list) {
+    const box = c._el;
+    const st = el('div', 'status');
+    st.innerHTML = '<span class="spin"></span>执行中…';
+    box.append(st);
+    try {
+      const r = await api('/api/execute', { card: { action: c.action, target: c.target, title: c.title } });
+      box.classList.remove('fail', 'pick');
+      box.classList.add(r.ok ? 'done' : 'fail');
+      st.className = 'status ' + (r.ok ? 'ok' : 'err');
+      st.textContent = (r.ok ? '✓ ' : '✕ ') + (r.detail || '') + '  ·  ' + (r.ms / 1000).toFixed(1) + 's' + (r.entry && r.entry.revert ? '  · 可撤销' : '');
+      if (r.entry) S.journal.push(r.entry);
+      r.ok ? ok++ : bad++;
+      renderLog();
+    } catch (e) {
+      st.className = 'status err';
+      st.textContent = '✕ ' + e.message;
+      box.classList.add('fail');
+      bad++;
+      if (bad >= 1) { /* 失败即停 */ break; }
+    }
+  }
+  S.busy = false;
+  go.textContent = '完成 ' + ok + ' 条' + (bad ? '，' + bad + ' 条没成功' : '');
+  go.disabled = true;
+
+  const done = S.journal.filter(e => e.revert && !e.undone);
+  if (done.length) {
+    const bar = $('#bar');
+    const undoAll = el('button', 'btn ghost', '全部撤销（' + done.length + '）');
+    undoAll.onclick = async () => {
+      undoAll.disabled = true;
+      undoAll.textContent = '正在撤销…';
+      for (const e of done.slice().reverse()) {
+        try { await api('/api/undo', { id: e.id }); } catch (x) {}
+      }
+      S.journal = (await api('/api/journal')).entries;
+      renderLog();
+      document.querySelectorAll('.card.done').forEach((box) => {
+        box.classList.remove('done');
+        const st = box.querySelector('.status');
+        if (st) { st.className = 'status ok'; st.textContent = '↩ 已撤销，恢复原样'; }
+      });
+      undoAll.textContent = '已全部恢复';
+      bubble('ai', '都退回去了，跟执行之前一样。这就是「做错的代价是三秒」。');
+    };
+    bar.append(undoAll);
+  }
+}
+
+async function undo(id, btn) {
+  btn.textContent = '…';
+  try {
+    const r = await api('/api/undo', { id });
+    S.journal = (await api('/api/journal')).entries;
+    renderLog();
+    bubble('ai', '「' + (r.detail || '已恢复') + '」——这一条退回去了。');
+  } catch (e) { btn.textContent = '撤销'; alert(e.message); }
+}
+
+/* ---------------- 体检流程 ---------------- */
+function showScan() {
+  const t = $('#thread');
+  t.innerHTML = '';
+  const box = el('div', 'scan');
+  box.append(el('h2', null, '正在读这台机器'), el('p', 'muted', '只读采集，不改任何设置，不上传任何数据。'));
+  const steps = el('div', 'steps');
+  const refs = STEPS.map(s => {
+    const d = el('div', 'step');
+    d.append(el('div', 'dot'), el('span', null, s));
+    steps.append(d);
+    return d;
+  });
+  box.append(steps);
+  t.append(box);
+}
+
+async function scanNow() {
+  showScan();
+  await api('/api/scan', {});
+  const refs = [...document.querySelectorAll('.step')];
+  const t = setInterval(async () => {
+    const s = await api('/api/scan/status');
+    const n = s.lines.length;
+    refs.forEach((r, i) => { r.className = 'step' + (i < n ? ' ok' : i === n ? ' on' : ''); });
+    if (!s.running) {
+      clearInterval(t);
+      refs.forEach(r => r.className = 'step ok');
+      if (s.error) { bubble('ai', '体检没跑完：' + s.error); return; }
+      const st = await api('/api/state');
+      S.report = st.report; S.analysis = st.analysis; S.journal = st.journal || [];
+      renderLeft(); renderLog();
+      $('#thread').innerHTML = '';
+      greet();
+    }
+  }, 400);
+}
+
+function emptyState() {
+  const t = $('#thread');
+  t.innerHTML = '';
+  const box = el('div', 'empty');
+  box.append(el('h2', null, '先给这台电脑做个体检'));
+  box.append(el('p', null, '我会读一遍硬件、装了哪些软件、开机自启、后台服务和安全状态。大约 20 秒，只读，不联网。'));
+  const b = el('button', 'btn primary big', '开始体检');
+  b.onclick = scanNow;
+  box.append(b);
+  t.append(box);
+}
+
+async function greet() {
+  const out = await api('/api/chat', { text: '' });
+  const m = bubble('ai', out.say);
+  if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || [], send));
+  if (out.cards) renderCards(out.cards);
+}
+
+async function boot() {
+  const st = await api('/api/state');
+  S.ai = !!st.ai; S.model = st.model;
+  $('#pillAI').textContent = st.ai ? 'AI 已连接' : '本地规则';
+  $('#pillAI').classList.toggle('on', !!st.ai);
+  if (st.ready) {
+    S.report = st.report; S.analysis = st.analysis; S.journal = st.journal || [];
+    renderLeft(); renderLog();
+    if (st.scanning) { showScan(); return scanNow(); }
+    // 有缓存：直接进对话
+    const last = S.journal.length;
+    greet();
+  } else {
+    // 第一次打开：不等用户点，直接开始体检（双击到出报告 20 秒）
+    emptyState();
+    setTimeout(scanNow, 700);
+  }
+}
+
+$('#pillAI').style.cursor = 'pointer';
+$('#pillAI').title = '点一下填 DeepSeek API Key（只存本机）';
+$('#pillAI').onclick = async () => {
+  if (S.ai) { bubble('ai', 'AI 已经连着了，用的是 ' + (S.model || 'deepseek-flash') + '。想换 key 就删掉 %LOCALAPPDATA%\\Kaiguang\\settings.json 里的 apiKey，再点这里。'); return; }
+  const k = prompt('粘贴 DeepSeek API Key。\n只写进本机 %LOCALAPPDATA%\\Kaiguang\\settings.json，不会上传，也不会写进报告。');
+  if (!k || !k.trim()) return;
+  const r = await api('/api/settings', { key: k.trim() });
+  if (r && r.ok) {
+    S.ai = true; S.model = r.model;
+    $('#pillAI').textContent = 'AI 已连接';
+    $('#pillAI').classList.add('on');
+    bubble('ai', '连上了。接下来按你这台机器的真实数据说话，不再走本地规则。');
+  } else {
+    bubble('ai', '这个 key 没存进去，再试一次。');
+  }
+};
+
+$('#send').onclick = () => send($('#input').value);
+$('#input').addEventListener('keydown', e => { if (e.key === 'Enter') send($('#input').value); });
+
+boot().catch(e => { document.body.append(el('p', null, '启动失败：' + e.message)); });
+
+</script>
+</body>
+</html>

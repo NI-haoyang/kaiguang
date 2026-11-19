@@ -10,6 +10,8 @@
 
 **v0.1 · 只读版**（网页 / 105 KB 单文件）：https://ni-haoyang.github.io/kaiguang/ —— 只看不动，把机器讲明白，给一张可审阅的开荒单。
 
+**静态交互演示**（不用下载，直接点）：https://ni-haoyang.github.io/kaiguang/docs/agent-demo.html —— 界面和动作序列与桌面版一致，执行是模拟的，不会碰你的电脑。
+
 ## v0.2 桌面版怎么跑
 
 1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `开机第一天-v0.2-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
