@@ -35,16 +35,6 @@ function renderLeft() {
     m.append(r);
   }
 
-  const chips = $('#chips');
-  chips.innerHTML = '';
-  const key = a.findings.filter(f => ['high', 'warn', 'info'].includes(f.level)).slice(0, 6);
-  if (!key.length) chips.append(el('span', 'muted', '没什么要处理的。'));
-  for (const f of key) {
-    const c = el('span', 'chip ' + (f.level === 'high' ? 'high' : f.level === 'warn' ? 'warn' : ''));
-    c.textContent = f.title.replace(/：.*$/, '').slice(0, 18);
-    chips.append(c);
-  }
-
   const v = a.verify;
   const box = $('#verify');
   box.className = 'verify ' + (v.tone || '');
@@ -53,6 +43,60 @@ function renderLeft() {
 
   $('#pillScan').textContent = '已体检';
   $('#pillScan').classList.add('on');
+
+  renderReport();
+}
+
+const LEVEL_TXT = { high: '要处理', warn: '建议看看', info: '知道就行', ok: '没问题' };
+const LEVEL_ORDER = { high: 0, warn: 1, info: 2, ok: 3 };
+
+// 左侧体检报告：跟网页版一样的逐条卡片——为什么、怎么办、涉及哪些东西
+function renderReport() {
+  const a = S.analysis;
+  const box = $('#report');
+  if (!a || !box) return;
+  box.innerHTML = '';
+  $('#reportCount').textContent = a.counts.high
+    ? a.findings.length + ' 条 · ' + a.counts.high + ' 处要处理'
+    : a.findings.length + ' 条 · 没有硬伤';
+
+  const list = a.findings.slice().sort((x, y) => (LEVEL_ORDER[x.level] ?? 9) - (LEVEL_ORDER[y.level] ?? 9));
+  if (!list.length) { box.append(el('p', 'muted', '没有发现需要处理的问题。')); return; }
+
+  for (const f of list) {
+    const c = el('article', 'fcard ' + (f.level || 'info'));
+    const head = el('div', 'fhead');
+    head.append(el('h3', null, f.title), el('span', 'flevel', LEVEL_TXT[f.level] || '记录'));
+    c.append(head);
+    if (f.detail) c.append(el('p', 'fdetail', f.detail));
+    if (f.fix) {
+      const p = el('p', 'ffix');
+      p.append(el('b', null, '→ '), document.createTextNode(f.fix));
+      c.append(p);
+    }
+    if (f.items && f.items.length) {
+      const wrap = el('div', 'fitems');
+      for (const t of f.items.slice(0, 8)) wrap.append(el('span', 'fitem', t));
+      if (f.items.length > 8) wrap.append(el('span', 'fitem', '+' + (f.items.length - 8) + ' 个'));
+      c.append(wrap);
+    }
+    if (f.action === 'open_settings') {
+      const label = f.cta || '打开设置页';
+      const btn = el('button', 'linkbtn', label);
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = '正在打开…';
+        try {
+          await api('/api/execute', { card: { action: 'open_settings', title: f.title, target: f.args || {} } });
+          btn.textContent = '✓ 已打开';
+          S.journal = (await api('/api/journal')).entries;
+          renderLog();
+        } catch (e) { btn.textContent = '打开失败'; }
+        setTimeout(() => { btn.disabled = false; btn.textContent = label; }, 3500);
+      };
+      c.append(btn);
+    }
+    box.append(c);
+  }
 }
 
 function renderLog() {

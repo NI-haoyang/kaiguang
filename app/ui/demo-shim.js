@@ -6,6 +6,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let seq = 0;
 
 function detailOf(action) {
+  if (action === 'open_settings') {
+    return { ok: true, detail: '真机上会真的弹出系统设置页；这里是静态演示，只记一笔', ms: 300, revert: null };
+  }
   if (action === 'disable_startup') {
     return { ok: true, detail: '已关闭（原条目还在注册表里，只是不启动了）', ms: 820, revert: { kind: 'reg', name: 'TX Mascot', value: 'C:\\Program Files\\ASUS\\TXMascot.exe' } };
   }

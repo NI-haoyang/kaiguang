@@ -14,7 +14,7 @@ async function boot() {
   const url = 'http://127.0.0.1:' + server.port + '/';
 
   win = new BrowserWindow({
-    width: 1320, height: 900, minWidth: 1080, minHeight: 700,
+    width: 1380, height: 900, minWidth: 1180, minHeight: 700,
     backgroundColor: '#080b09', show: false, autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#080b09', symbolColor: '#93a39a', height: 44 },

@@ -27,7 +27,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 .pill.on{color:var(--acc);border-color:#1f4d36;background:#0d1f17}
 .pill.acc{color:#9fe8c0;border-color:#1f4d36}
 
-.grid{flex:1;display:grid;grid-template-columns:290px minmax(420px,1fr) 330px;gap:0;min-height:0}
+.grid{flex:1;display:grid;grid-template-columns:372px minmax(400px,1fr) 320px;gap:0;min-height:0}
 .col{padding:18px;overflow:auto;min-height:0}
 .left,.right{background:var(--panel);}
 .left{border-right:1px solid var(--line)}
@@ -66,6 +66,32 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 .verify b{display:block;font-size:13px;margin-bottom:3px}
 .verify.ok b{color:var(--acc)} .verify.high b{color:#ff9d9d} .verify.warn b{color:var(--warn)}
 .verify p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
+
+/* 体检报告（左侧逐条列表） */
+.report-block{margin-top:20px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:-2px 0 10px;font-size:11px;color:var(--dim2)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.legend i.high{background:var(--high)} .legend i.warn{background:var(--warn)}
+.legend i.info{background:var(--blue)} .legend i.ok{background:var(--acc)}
+.report{display:flex;flex-direction:column;gap:9px}
+.fcard{border:1px solid var(--line);border-left:3px solid #2a3c33;border-radius:10px;background:var(--panel2);padding:10px 12px}
+.fcard.high{border-left-color:var(--high)} .fcard.warn{border-left-color:var(--warn)}
+.fcard.info{border-left-color:var(--blue)} .fcard.ok{border-left-color:#2f6b4a}
+.fhead{display:flex;align-items:baseline;gap:8px}
+.fhead h3{margin:0;flex:1;font-size:13px;font-weight:600;line-height:1.45}
+.flevel{font-size:10.5px;padding:1px 6px;border-radius:5px;border:1px solid #24322b;color:var(--dim);white-space:nowrap}
+.fcard.high .flevel{color:#ffb4b4;border-color:#4a2222;background:#20100f}
+.fcard.warn .flevel{color:#f7d894;border-color:#4a3d1c;background:#1d1808}
+.fcard.info .flevel{color:#a8d0f7;border-color:#24384a;background:#0d1620}
+.fcard.ok .flevel{color:#9fe8c0;border-color:#1f4d36;background:#0d1f17}
+.fdetail{margin:6px 0 0;font-size:12px;color:var(--dim);line-height:1.62}
+.ffix{margin:6px 0 0;font-size:12px;color:#a9e6c4;line-height:1.6}
+.ffix b{color:var(--acc);font-weight:600}
+.fitems{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.fitem{font-size:10.5px;color:#8fb8a1;background:#0b1210;border:1px solid var(--line);border-radius:5px;padding:2px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fcard .linkbtn{margin-top:9px}
+.fcard .status{margin-top:6px}
 
 .foot{margin:18px 0 0;font-size:11px;color:var(--dim2)}
 
@@ -186,13 +212,16 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
     <section class="metrics" id="metrics"></section>
 
     <section class="block">
-      <h2>需要处理</h2>
-      <div class="chips" id="chips"><span class="muted">—</span></div>
-    </section>
-
-    <section class="block">
       <h2>验机</h2>
       <div class="verify" id="verify"><p class="muted">还没验。</p></div>
+    </section>
+
+    <section class="block report-block">
+      <h2>体检报告 <span class="hint" id="reportCount"></span></h2>
+      <div class="legend">
+        <span><i class="d high"></i>要处理</span><span><i class="d warn"></i>建议看看</span><span><i class="d info"></i>知道就行</span><span><i class="d ok"></i>没问题</span>
+      </div>
+      <div class="report" id="report"><p class="muted">先跑一遍体检，报告就出现在这里。</p></div>
     </section>
 
     <p class="foot">只读采集 · 本地分析 · 每步可撤销</p>
@@ -231,6 +260,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let seq = 0;
 
 function detailOf(action) {
+  if (action === 'open_settings') {
+    return { ok: true, detail: '真机上会真的弹出系统设置页；这里是静态演示，只记一笔', ms: 300, revert: null };
+  }
   if (action === 'disable_startup') {
     return { ok: true, detail: '已关闭（原条目还在注册表里，只是不启动了）', ms: 820, revert: { kind: 'reg', name: 'TX Mascot', value: 'C:\\Program Files\\ASUS\\TXMascot.exe' } };
   }
@@ -347,16 +379,6 @@ function renderLeft() {
     m.append(r);
   }
 
-  const chips = $('#chips');
-  chips.innerHTML = '';
-  const key = a.findings.filter(f => ['high', 'warn', 'info'].includes(f.level)).slice(0, 6);
-  if (!key.length) chips.append(el('span', 'muted', '没什么要处理的。'));
-  for (const f of key) {
-    const c = el('span', 'chip ' + (f.level === 'high' ? 'high' : f.level === 'warn' ? 'warn' : ''));
-    c.textContent = f.title.replace(/：.*$/, '').slice(0, 18);
-    chips.append(c);
-  }
-
   const v = a.verify;
   const box = $('#verify');
   box.className = 'verify ' + (v.tone || '');
@@ -365,6 +387,60 @@ function renderLeft() {
 
   $('#pillScan').textContent = '已体检';
   $('#pillScan').classList.add('on');
+
+  renderReport();
+}
+
+const LEVEL_TXT = { high: '要处理', warn: '建议看看', info: '知道就行', ok: '没问题' };
+const LEVEL_ORDER = { high: 0, warn: 1, info: 2, ok: 3 };
+
+// 左侧体检报告：跟网页版一样的逐条卡片——为什么、怎么办、涉及哪些东西
+function renderReport() {
+  const a = S.analysis;
+  const box = $('#report');
+  if (!a || !box) return;
+  box.innerHTML = '';
+  $('#reportCount').textContent = a.counts.high
+    ? a.findings.length + ' 条 · ' + a.counts.high + ' 处要处理'
+    : a.findings.length + ' 条 · 没有硬伤';
+
+  const list = a.findings.slice().sort((x, y) => (LEVEL_ORDER[x.level] ?? 9) - (LEVEL_ORDER[y.level] ?? 9));
+  if (!list.length) { box.append(el('p', 'muted', '没有发现需要处理的问题。')); return; }
+
+  for (const f of list) {
+    const c = el('article', 'fcard ' + (f.level || 'info'));
+    const head = el('div', 'fhead');
+    head.append(el('h3', null, f.title), el('span', 'flevel', LEVEL_TXT[f.level] || '记录'));
+    c.append(head);
+    if (f.detail) c.append(el('p', 'fdetail', f.detail));
+    if (f.fix) {
+      const p = el('p', 'ffix');
+      p.append(el('b', null, '→ '), document.createTextNode(f.fix));
+      c.append(p);
+    }
+    if (f.items && f.items.length) {
+      const wrap = el('div', 'fitems');
+      for (const t of f.items.slice(0, 8)) wrap.append(el('span', 'fitem', t));
+      if (f.items.length > 8) wrap.append(el('span', 'fitem', '+' + (f.items.length - 8) + ' 个'));
+      c.append(wrap);
+    }
+    if (f.action === 'open_settings') {
+      const label = f.cta || '打开设置页';
+      const btn = el('button', 'linkbtn', label);
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = '正在打开…';
+        try {
+          await api('/api/execute', { card: { action: 'open_settings', title: f.title, target: f.args || {} } });
+          btn.textContent = '✓ 已打开';
+          S.journal = (await api('/api/journal')).entries;
+          renderLog();
+        } catch (e) { btn.textContent = '打开失败'; }
+        setTimeout(() => { btn.disabled = false; btn.textContent = label; }, 3500);
+      };
+      c.append(btn);
+    }
+    box.append(c);
+  }
 }
 
 function renderLog() {

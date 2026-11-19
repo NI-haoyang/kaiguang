@@ -20,7 +20,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 .pill.on{color:var(--acc);border-color:#1f4d36;background:#0d1f17}
 .pill.acc{color:#9fe8c0;border-color:#1f4d36}
 
-.grid{flex:1;display:grid;grid-template-columns:290px minmax(420px,1fr) 330px;gap:0;min-height:0}
+.grid{flex:1;display:grid;grid-template-columns:372px minmax(400px,1fr) 320px;gap:0;min-height:0}
 .col{padding:18px;overflow:auto;min-height:0}
 .left,.right{background:var(--panel);}
 .left{border-right:1px solid var(--line)}
@@ -59,6 +59,32 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 .verify b{display:block;font-size:13px;margin-bottom:3px}
 .verify.ok b{color:var(--acc)} .verify.high b{color:#ff9d9d} .verify.warn b{color:var(--warn)}
 .verify p{margin:0;font-size:12px;color:var(--dim);line-height:1.6}
+
+/* 体检报告（左侧逐条列表） */
+.report-block{margin-top:20px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:-2px 0 10px;font-size:11px;color:var(--dim2)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.legend i.high{background:var(--high)} .legend i.warn{background:var(--warn)}
+.legend i.info{background:var(--blue)} .legend i.ok{background:var(--acc)}
+.report{display:flex;flex-direction:column;gap:9px}
+.fcard{border:1px solid var(--line);border-left:3px solid #2a3c33;border-radius:10px;background:var(--panel2);padding:10px 12px}
+.fcard.high{border-left-color:var(--high)} .fcard.warn{border-left-color:var(--warn)}
+.fcard.info{border-left-color:var(--blue)} .fcard.ok{border-left-color:#2f6b4a}
+.fhead{display:flex;align-items:baseline;gap:8px}
+.fhead h3{margin:0;flex:1;font-size:13px;font-weight:600;line-height:1.45}
+.flevel{font-size:10.5px;padding:1px 6px;border-radius:5px;border:1px solid #24322b;color:var(--dim);white-space:nowrap}
+.fcard.high .flevel{color:#ffb4b4;border-color:#4a2222;background:#20100f}
+.fcard.warn .flevel{color:#f7d894;border-color:#4a3d1c;background:#1d1808}
+.fcard.info .flevel{color:#a8d0f7;border-color:#24384a;background:#0d1620}
+.fcard.ok .flevel{color:#9fe8c0;border-color:#1f4d36;background:#0d1f17}
+.fdetail{margin:6px 0 0;font-size:12px;color:var(--dim);line-height:1.62}
+.ffix{margin:6px 0 0;font-size:12px;color:#a9e6c4;line-height:1.6}
+.ffix b{color:var(--acc);font-weight:600}
+.fitems{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.fitem{font-size:10.5px;color:#8fb8a1;background:#0b1210;border:1px solid var(--line);border-radius:5px;padding:2px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fcard .linkbtn{margin-top:9px}
+.fcard .status{margin-top:6px}
 
 .foot{margin:18px 0 0;font-size:11px;color:var(--dim2)}
 

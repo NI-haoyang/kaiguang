@@ -34,13 +34,16 @@
     <section class="metrics" id="metrics"></section>
 
     <section class="block">
-      <h2>需要处理</h2>
-      <div class="chips" id="chips"><span class="muted">—</span></div>
-    </section>
-
-    <section class="block">
       <h2>验机</h2>
       <div class="verify" id="verify"><p class="muted">还没验。</p></div>
+    </section>
+
+    <section class="block report-block">
+      <h2>体检报告 <span class="hint" id="reportCount"></span></h2>
+      <div class="legend">
+        <span><i class="d high"></i>要处理</span><span><i class="d warn"></i>建议看看</span><span><i class="d info"></i>知道就行</span><span><i class="d ok"></i>没问题</span>
+      </div>
+      <div class="report" id="report"><p class="muted">先跑一遍体检，报告就出现在这里。</p></div>
     </section>
 
     <p class="foot">只读采集 · 本地分析 · 每步可撤销</p>
