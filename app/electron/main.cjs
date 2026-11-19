@@ -24,8 +24,17 @@ async function boot() {
     },
   });
 
+  // 窗口一开始是隐藏的，等首帧画好再显示；但 ready-to-show 偶尔不触发（Chromium 在隐藏窗口上推迟首帧），
+  // 所以再加两道兜底：页面加载完 800ms 后显示，最多 4 秒无条件显示。宁可早一点出现，也不要"点了没反应"。
+  const reveal = () => { try { if (win && !win.isDestroyed() && !win.isVisible()) win.show(); } catch {} };
   win.loadURL(url);
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', reveal);
+  win.webContents.once('did-finish-load', () => setTimeout(reveal, 800));
+  setTimeout(reveal, 4000);
+  win.webContents.on('did-fail-load', (_e, code, desc, u) => {
+    console.error('load failed', code, desc, u);
+    dialog.showErrorBox('页面没加载出来', '错误码 ' + code + '：' + desc + '\n' + u);
+  });
   win.on('closed', () => { win = null; });
 
 
@@ -89,7 +98,13 @@ async function boot() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
+  app.on('second-instance', () => {
+    if (!win) return;
+    // 窗口可能因为上一次的异常还藏在后台：再点一次图标的人期待的是"窗口出现"，不是"进程已存在"。
+    if (!win.isVisible()) win.show();
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  });
   app.whenReady().then(boot).catch((err) => {
     dialog.showErrorBox('开机第一天启动失败', String(err && err.stack || err));
     app.quit();
