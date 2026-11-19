@@ -33,6 +33,7 @@ function ToDate($v) {
 }
 
 # ---------- 系统 ----------
+Write-Host "##step 读系统与硬件"
 $os  = Get-CimInstance Win32_OperatingSystem
 $cs  = Get-CimInstance Win32_ComputerSystem
 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
@@ -52,6 +53,7 @@ $sys = [ordered]@{
 }
 
 # ---------- 磁盘 ----------
+Write-Host "##step 看磁盘空间"
 $disks = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Object {
   [ordered]@{
     drive  = $_.DeviceID
@@ -62,6 +64,7 @@ $disks = @(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | ForEach-Obj
 })
 
 # ---------- 已装软件（注册表，不用 Win32_Product，快且不触发 MSI 修复） ----------
+Write-Host "##step 数一遍装了多少软件"
 $keys = @(
   'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
   'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
@@ -88,6 +91,7 @@ foreach ($k in $keys) {
 }
 
 # ---------- 启动项 ----------
+Write-Host "##step 检查开机自启"
 $startup = New-Object System.Collections.ArrayList
 Get-CimInstance Win32_StartupCommand | ForEach-Object {
   [void]$startup.Add([ordered]@{ name = Sanitize $_.Name; command = Sanitize $_.Command; source = Sanitize $_.Location })
@@ -107,6 +111,7 @@ foreach ($rk in $runKeys) {
 $startup = @($startup | Group-Object { $_.name } | ForEach-Object { $_.Group[0] } | Sort-Object name)
 
 # ---------- 自启的第三方服务 ----------
+Write-Host "##step 看后台服务"
 $services = @(Get-CimInstance Win32_Service |
   Where-Object { $_.StartMode -eq 'Auto' -and $_.State -eq 'Running' -and $_.PathName -and $_.PathName -notmatch 'System32|SysWOW64|\\Windows\\' } |
   ForEach-Object {
@@ -115,6 +120,7 @@ $services = @(Get-CimInstance Win32_Service |
   })
 
 # ---------- 安全与系统状态 ----------
+Write-Host "##step 查防火墙和防护状态"
 $def = Get-MpComputerStatus
 $fw  = @(Get-NetFirewallProfile | Select-Object Name, Enabled)
 $hibernate = (Get-Item "$env:SystemDrive\hiberfil.sys").Length
@@ -129,6 +135,7 @@ $security = [ordered]@{
 }
 
 # ---------- 验机：判断「是不是全新机」的硬证据 ----------
+Write-Host "##step 验机：电池、硬盘、安装天数"
 # 新机出厂会通电测试，所以不会全是 0；关键看量级对不对得上。
 # 电池：优先用系统自带的 powercfg 报告（最通用），WMI 只做兜底
 # 报告写到临时文件，读完立刻删除，不落盘到用户目录
@@ -218,6 +225,7 @@ $health = [ordered]@{
 }
 
 # ---------- 组装 ----------
+Write-Host "##step 整理成报告"
 $report = [ordered]@{
   schema     = 'kaiguang/1'
   generatedAt = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')

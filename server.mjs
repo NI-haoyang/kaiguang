@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('./', import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
 const KEY = process.env.DEEPSEEK_API_KEY || '';
-const MODEL = process.env.LLM_MODEL || 'deepseek-chat';
+const MODEL = process.env.LLM_MODEL || 'deepseek-flash';
 const BASE = process.env.LLM_BASE || 'https://api.deepseek.com/chat/completions';
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml' };

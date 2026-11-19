@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>开机第一天 · Agent 版界面线框</title>
+<style>
+:root{
+  --bg:#0b0d11; --panel:#14181f; --panel2:#191e26; --line:#242b36;
+  --txt:#e6edf3; --dim:#8b98a8; --dim2:#6b7787;
+  --green:#3fd08a; --warn:#f0b429; --high:#ff6b6b; --info:#6ea8fe; --purple:#9b7bf0;
+}
+*{box-sizing:border-box}
+body{margin:0;background:
+  radial-gradient(900px 500px at 82% -8%, rgba(63,208,138,.12), transparent 60%),
+  radial-gradient(700px 420px at 8% 0%, rgba(110,168,254,.09), transparent 60%),
+  var(--bg);
+  color:var(--txt);font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.86em;background:#1d2430;padding:1px 6px;border-radius:5px;color:#c8d6e5}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);background:rgba(11,13,17,.86);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:11px}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;background:linear-gradient(145deg,#3fd08a,#1f9c66);color:#06251a}
+.brand b{font-size:15px;display:block;line-height:1.2}
+.brand span{font-size:11.5px;color:var(--dim)}
+.pills{display:flex;gap:8px}
+.pill{font-size:11.5px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.pill.on{color:var(--green);border-color:rgba(63,208,138,.35);background:rgba(63,208,138,.08)}
+
+.wrap{display:grid;grid-template-columns:264px 1fr 300px;gap:14px;padding:14px 16px 84px;align-items:start}
+.col{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px}
+
+/* LEFT */
+.score{font-size:46px;font-weight:700;color:var(--green);line-height:1.1;letter-spacing:-1px}
+.score em{font-style:normal;font-size:15px;color:var(--dim);font-weight:400;margin-left:6px}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #1e252f;font-size:12.5px}
+.kv:last-child{border-bottom:0}
+.kv span{color:var(--dim)}
+.kv b{font-weight:600}
+.tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:5px;margin:3px 4px 0 0}
+.t-high{background:rgba(255,107,107,.14);color:#ff8b8b}
+.t-warn{background:rgba(240,180,41,.14);color:#f5c451}
+
+/* MIDDLE */
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{max-width:82%;padding:9px 13px;border-radius:12px;font-size:13.5px;line-height:1.6}
+.ai{background:var(--panel2);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start}
+.me{background:rgba(63,208,138,.13);border:1px solid rgba(63,208,138,.28);border-top-right-radius:4px;align-self:flex-end;color:#d7f5e6}
+.who{font-size:10.5px;color:var(--dim2);margin-bottom:3px;letter-spacing:.4px}
+.divider{display:flex;align-items:center;gap:10px;color:var(--dim2);font-size:11px;margin:6px 0}
+.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}
+
+.act{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;display:flex;gap:11px;transition:.15s}
+.act:hover{border-color:#2f3a49}
+.act.on{border-color:rgba(63,208,138,.4);background:rgba(63,208,138,.05)}
+.box{width:17px;height:17px;border-radius:5px;border:1.5px solid #3a4657;flex:0 0 auto;margin-top:2px;display:grid;place-items:center;font-size:11px;color:#06251a}
+.act.on .box{background:var(--green);border-color:var(--green)}
+.act h4{margin:0 0 3px;font-size:13.5px;font-weight:600}
+.act p{margin:0;font-size:12.5px;color:var(--dim);line-height:1.55}
+.meta{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+.b{font-size:10.5px;padding:1.5px 7px;border-radius:5px;border:1px solid var(--line);color:var(--dim)}
+.b.g{color:var(--green);border-color:rgba(63,208,138,.32);background:rgba(63,208,138,.07)}
+.b.w{color:var(--warn);border-color:rgba(240,180,41,.32);background:rgba(240,180,41,.07)}
+.b.p{color:var(--purple);border-color:rgba(155,123,240,.32);background:rgba(155,123,240,.07)}
+
+/* RIGHT */
+.log{font-size:12px}
+.row{padding:8px 0;border-bottom:1px dashed #1e252f}
+.row:last-child{border-bottom:0}
+.row .t{color:var(--dim2);font-size:10.5px;letter-spacing:.3px}
+.row .n{margin:2px 0;font-size:12.5px}
+.ok{color:var(--green)}.bad{color:var(--high)}
+.mini{font-size:10.5px;color:var(--dim2)}
+.foot{position:fixed;left:0;right:0;bottom:0;background:rgba(11,13,17,.94);border-top:1px solid var(--line);padding:11px 20px;display:flex;gap:9px;align-items:center;backdrop-filter:blur(8px)}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:9px;padding:8px 14px;font-size:13px;cursor:pointer}
+.btn.pri{background:linear-gradient(145deg,#3fd08a,#25a86f);color:#06251a;border-color:transparent;font-weight:600}
+.btn.gho{background:transparent}
+.grow{flex:1}
+.warnline{font-size:11.5px;color:var(--dim2)}
+h3.sec{margin:0 0 10px;font-size:12px;color:var(--dim);letter-spacing:1px;font-weight:600}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <div class="logo">开</div>
+    <div><b>开机第一天</b><span>新电脑开荒 · 先体检，再决定装什么</span></div>
+  </div>
+  <div class="pills">
+    <span class="pill on">已体检</span>
+    <span class="pill">只读采集</span>
+    <span class="pill">动作可撤销</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 左：诊断 -->
+  <div class="col">
+    <div class="card">
+      <div style="font-size:11.5px;color:var(--dim)">开荒指数</div>
+      <div class="score">61<em>分</em></div>
+      <div style="font-size:12px;color:var(--dim);margin-top:2px">问题集中在后台和重复安装</div>
+    </div>
+    <div class="card">
+      <div class="kv"><span>系统盘剩余</span><b>46%</b></div>
+      <div class="kv"><span>开机自启</span><b>10 个</b></div>
+      <div class="kv"><span>第三方服务</span><b>23 个</b></div>
+      <div class="kv"><span>已装软件</span><b>76 个</b></div>
+    </div>
+    <div class="card">
+      <h3 class="sec">需要处理</h3>
+      <div style="font-size:12.5px;line-height:1.9">
+        <span class="tag t-high">4 套安全软件</span>
+        <span class="tag t-high">防火墙关闭</span>
+        <span class="tag t-warn">3 个办公套件</span>
+        <span class="tag t-warn">5 个影音客户端</span>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-size:11.5px;color:var(--dim2);line-height:1.6">
+        对话只保留在本次窗口里，关掉就没了。<br>报告和聊天记录都不落盘。
+      </div>
+    </div>
+  </div>
+
+  <!-- 中：对话 + 方案 -->
+  <div class="col">
+    <div class="card chat">
+      <div class="msg ai"><div class="who">开机第一天</div>体检完了，你这台是 ASUS FX608LMG，Win11 家庭版，装了 76 个软件，其中华硕自己就占了 13 个。<br><br>先问一句：这台主要拿来干嘛？<b>学习写东西</b>、<b>打游戏</b>，还是<b>剪视频</b>？</div>
+      <div class="msg me">学习为主，偶尔打游戏</div>
+      <div class="msg ai"><div class="who">开机第一天</div>明白。那第二个问题：你现在有三个办公套件（OfficePLUS、Microsoft 365、WPS），留哪个？<br><span style="color:var(--dim2);font-size:12px">留一个就够，三个都在只会互相抢「默认打开方式」。</span></div>
+      <div class="msg me">留 WPS 就行</div>
+      <div class="msg ai"><div class="who">开机第一天</div>够了，不用再问了。<br><br>按你的情况我列出四条，其中第三条要管理员权限，我不会替你改——会把你带到设置页，最后一下你自己点。</div>
+      <div class="divider">方案 · 4 条，已选 3 条</div>
+
+      <div class="act on">
+        <div class="box">✓</div>
+        <div>
+          <h4>关掉 3 个装饰性自启</h4>
+          <p>TX Mascot 桌宠、ASUS Framework Service、AURA 灯效助手。都不参与系统功能，纯装饰。</p>
+          <div class="meta"><span class="b g">可撤销</span><span class="b">约 0.3 秒</span><span class="b">不需要管理员</span></div>
+        </div>
+      </div>
+
+      <div class="act on">
+        <div class="box">✓</div>
+        <div>
+          <h4>卸载 McAfee 联网顾问</h4>
+          <p>你已经有火绒了。两套实时防护会互相扫同一批文件，装软件和解压时最明显。</p>
+          <div class="meta"><span class="b g">可撤销</span><span class="b">约 12 秒</span><span class="b">不需要管理员</span></div>
+        </div>
+      </div>
+
+      <div class="act">
+        <div class="box"></div>
+        <div>
+          <h4>把 3 个 GlideX 服务改成手动</h4>
+          <p>投屏用的，不投屏时纯占内存。改服务启动类型需要管理员权限。</p>
+          <div class="meta"><span class="b p">带到设置页</span><span class="b w">需要你点确认</span></div>
+        </div>
+      </div>
+
+      <div class="act on">
+        <div class="box">✓</div>
+        <div>
+          <h4>打开防火墙（专用 + 公用）</h4>
+          <p>现在两个都是关的。宿舍和咖啡店的公共 Wi-Fi 上，这是挡局域网扫描的第一道门。</p>
+          <div class="meta"><span class="b p">带到设置页</span><span class="b">30 秒</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右：执行日志 -->
+  <div class="col">
+    <div class="card">
+      <h3 class="sec">执行日志</h3>
+      <div class="log">
+        <div class="row">
+          <div class="t">09:41:02</div>
+          <div class="n">关自启 · TX Mascot</div>
+          <div class="mini ok">✓ 完成 0.3s · 可撤销</div>
+        </div>
+        <div class="row">
+          <div class="t">09:41:03</div>
+          <div class="n">关自启 · AURA 灯效助手</div>
+          <div class="mini ok">✓ 完成 0.2s · 可撤销</div>
+        </div>
+        <div class="row">
+          <div class="t">09:41:05</div>
+          <div class="n">卸载 · McAfee 联网顾问</div>
+          <div class="mini ok">✓ 完成 12.4s · 可撤销</div>
+        </div>
+        <div class="row">
+          <div class="t">09:41:18</div>
+          <div class="n">改服务 · GlideX Service</div>
+          <div class="mini bad">✗ 需要管理员权限，已停止</div>
+          <div class="mini">后面 1 条未执行</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="sec">原值已记录</h3>
+      <div style="font-size:11.5px;color:var(--dim);line-height:1.7">
+        <code>TX Mascot</code> → <span style="color:var(--dim2)">C:\...\TXMascot.exe</span><br>
+        <code>AURA</code> → <span style="color:var(--dim2)">C:\...\LightingService.exe</span><br>
+        撤销 = 把这些值写回去。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <button class="btn pri">执行选中的 3 项</button>
+  <button class="btn gho">全部撤销</button>
+  <div class="grow"></div>
+  <div class="warnline">失败即停 · 每一步都留痕 · 做完可以退回</div>
+</div>
+
+</body>
+</html>

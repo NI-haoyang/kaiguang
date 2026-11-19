@@ -5,3 +5,7 @@ _test/
 dist/
 node_modules/
 .DS_Store
+# v0.2 Agent 版
+app/data/
+settings.json
+*.log

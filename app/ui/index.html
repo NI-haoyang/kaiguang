@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开机第一天 · Agent</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo">开</span>
+    <div>
+      <h1>开机第一天</h1>
+      <p>新电脑开荒 · 先体检，再决定装什么</p>
+    </div>
+  </div>
+  <div class="pills">
+    <span class="pill" id="pillScan">未体检</span>
+    <span class="pill" id="pillAI">AI 未连接</span>
+    <span class="pill acc">动作可撤销</span>
+  </div>
+</header>
+
+<main class="grid">
+  <!-- 左：诊断 -->
+  <aside class="col left">
+    <section class="score-card" id="scoreCard">
+      <div class="score-head"><span>开荒指数</span><span class="tag" id="scoreVerdictTag">待体检</span></div>
+      <div class="score"><b id="score">--</b><i>分</i></div>
+      <p class="score-note" id="scoreNote">先跑一遍体检，拿到这台机器的真实数字。</p>
+    </section>
+
+    <section class="metrics" id="metrics"></section>
+
+    <section class="block">
+      <h2>需要处理</h2>
+      <div class="chips" id="chips"><span class="muted">—</span></div>
+    </section>
+
+    <section class="block">
+      <h2>验机</h2>
+      <div class="verify" id="verify"><p class="muted">还没验。</p></div>
+    </section>
+
+    <p class="foot">只读采集 · 本地分析 · 每步可撤销</p>
+  </aside>
+
+  <!-- 中：对话 -->
+  <section class="col mid">
+    <div class="thread" id="thread"></div>
+    <div class="composer">
+      <input id="input" type="text" placeholder="跟它说一句，或者点上面的选项" autocomplete="off">
+      <button id="send" class="btn primary">发送</button>
+    </div>
+  </section>
+
+  <!-- 右：执行日志 -->
+  <aside class="col right">
+    <section class="block">
+      <h2>执行日志 <span class="hint" id="logCount"></span></h2>
+      <div class="log" id="log"><p class="muted">还没有执行任何动作。</p></div>
+    </section>
+    <section class="block">
+      <h2>原值记录</h2>
+      <p class="muted small" id="origNote">执行前会先把原值记下来。撤销就是把原值写回去。</p>
+      <div class="orig" id="orig"></div>
+    </section>
+    <p class="foot">失败即停 · 每一步都留痕</p>
+  </aside>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

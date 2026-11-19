@@ -1,0 +1,30 @@
+{
+  "name": "kaiguang",
+  "version": "0.2.0",
+  "description": "新电脑开荒：先体检，再决定装什么。",
+  "main": "app/electron/main.cjs",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "app": "electron .",
+    "dev": "electron .",
+    "server": "node app/server.mjs --port 4321"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NI-haoyang/kaiguang.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/NI-haoyang/kaiguang/issues"
+  },
+  "homepage": "https://github.com/NI-haoyang/kaiguang#readme",
+  "devDependencies": {
+    "electron": "^33.4.11"
+  },
+  "productName": "开机第一天"
+}
