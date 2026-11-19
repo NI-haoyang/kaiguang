@@ -1,4 +1,5 @@
 import http from 'node:http';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -15,6 +16,22 @@ const UI = path.join(HERE, 'ui');
 // 缓存与采集中间文件放本机用户目录，安装目录可能只读（打包后 resources\app 不该被写）
 const DATA = path.join(process.env.LOCALAPPDATA || path.join(HERE, 'data'), 'Kaiguang', 'data');
 const CACHE = path.join(DATA, 'last-report.json');
+
+// 本地服务只给自己的页面用。每次启动生成一次性 token，随 index.html 下发；
+// 别的网页读不到我们的 HTML（没有 CORS），也就拿不到 token。
+const TOKEN = crypto.randomBytes(18).toString('hex');
+let ORIGINS = new Set();
+
+function tokenOk(req) {
+  const t = req.headers['x-kg-token'];
+  if (typeof t !== 'string' || t.length !== TOKEN.length) return false;
+  try { return crypto.timingSafeEqual(Buffer.from(t), Buffer.from(TOKEN)); } catch { return false; }
+}
+function originOk(req) {
+  const o = req.headers.origin;
+  if (!o) return true;               // 同源 GET 通常不带 Origin
+  return ORIGINS.has(o);
+}
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
@@ -69,7 +86,10 @@ function serveStatic(req, res, url) {
   if (p === '/' || p === '/index.html') p = '/index.html';
   const fp = path.join(UI, p);
   if (!fp.startsWith(UI) || !fs.existsSync(fp) || fs.statSync(fp).isDirectory()) { res.writeHead(404); return res.end('not found'); }
-  const b = fs.readFileSync(fp);
+  let b = fs.readFileSync(fp);
+  if (p === '/index.html') {
+    b = Buffer.from(b.toString('utf8').replace('</head>', '<script>window.KG_TOKEN="' + TOKEN + '"</script></head>'), 'utf8');
+  }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
   res.end(b);
 }
@@ -77,6 +97,14 @@ function serveStatic(req, res, url) {
 async function handle(req, res) {
   const url = new URL(req.url, 'http://127.0.0.1');
   const p = url.pathname;
+
+  if (p.startsWith('/api/')) {
+    if (!tokenOk(req)) return json(res, { detail: '页面和程序对不上，重启一次就好。' }, 401);
+    if (!originOk(req)) return json(res, { detail: '只接受本机页面发来的请求。' }, 403);
+    if (req.method === 'POST' && !/^application\/json\b/i.test(String(req.headers['content-type'] || ''))) {
+      return json(res, { detail: '请求格式不对，需要 application/json。' }, 415);
+    }
+  }
 
   if (p === '/api/state') return json(res, {
     ai: aiOn(), scanning: S.scan.running,
@@ -180,7 +208,11 @@ export function start(port = 0) {
   loadCache();
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => { handle(req, res).catch(e => { try { json(res, { error: e.message }, 500); } catch {} }); });
-    server.listen(port, '127.0.0.1', () => resolve({ server, port: server.address().port, close: () => server.close() }));
+    server.listen(port, '127.0.0.1', () => {
+      const got = server.address().port;
+      ORIGINS = new Set(['http://127.0.0.1:' + got, 'http://localhost:' + got]);
+      resolve({ server, port: got, close: () => server.close() });
+    });
   });
 }
 

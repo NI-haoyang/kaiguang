@@ -12,9 +12,13 @@
 
 **静态交互演示**（不用下载，直接点）：https://ni-haoyang.github.io/kaiguang/docs/agent-demo.html —— 界面和动作序列与桌面版一致，执行是模拟的，不会碰你的电脑。
 
+## 本地服务是上锁的
+
+桌面版只监听 `127.0.0.1`，不对外开端口。每次启动生成一次性口令，随页面下发，所有 `/api/*` 请求都要带；别的网页读不到页面源码，也拿不到口令，就没法替你按「执行」。动作里的「打开设置页」在动作库这一层就被限制成 `ms-settings:`，不会变成打开任意路径。
+
 ## v0.2 桌面版怎么跑
 
-1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
+1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.1-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
 2. 解压到任意目录，双击 `开机第一天.exe`。
 3. 等 20 秒，窗口里自动出体检报告；在中间对话框点一个选项（或直接打字），动作卡片就出来了。
 4. 勾选要做的，点「执行选中的 N 项」；想反悔，点左下角「全部撤销」。

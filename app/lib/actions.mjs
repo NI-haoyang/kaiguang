@@ -1,9 +1,6 @@
 // 动作库：每个动作 = 描述 + 执行 + 撤销。
 // 硬规矩：没有 revert 的动作不许进 L1（可一键执行的那一档）。
 import { spawn } from 'node:child_process';
-import path from 'node:path';
-import fs from 'node:fs';
-import os from 'node:os';
 
 const PS_PRE = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $ProgressPreference='SilentlyContinue'; ";
 
@@ -57,17 +54,16 @@ function delScript(root, name) {
 }
 
 // 整机级（HKLM）必须管理员。不偷偷提权：弹一次 UAC，点了「是」才写，点了「否」就当没发生。
+// 脚本走 -EncodedCommand，不落临时文件：没有「先写文件再执行」之间被人替换的窗口。
 async function elevate(script) {
-  const file = path.join(os.tmpdir(), 'kg_elev_' + Date.now() + '.ps1');
-  fs.writeFileSync(file, "$ErrorActionPreference = 'Stop'\r\n" + script + '\r\n', 'utf8');
-  try {
-    const r = await runPS(
-      '$p = Start-Process -FilePath powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru ' +
-      '-ArgumentList @(' + q('-NoProfile') + ',' + q('-ExecutionPolicy') + ',' + q('Bypass') + ',' + q('-File') + ',' + q(file) + '); ' +
-      "if ($p) { 'EXIT=' + $p.ExitCode } else { 'EXIT=?' }", 180000);
-    const m = r.out.match(/EXIT=(-?\d+)/);
-    return { ok: !!m && m[1] === '0', err: (r.err || '').trim().slice(0, 200) };
-  } finally { try { fs.unlinkSync(file); } catch {} }
+  const full = "$ErrorActionPreference = 'Stop'\r\n" + script + '\r\n';
+  const b64 = Buffer.from(full, 'utf16le').toString('base64');
+  const r = await runPS(
+    '$p = Start-Process -FilePath powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru ' +
+    '-ArgumentList @(' + q('-NoProfile') + ',' + q('-ExecutionPolicy') + ',' + q('Bypass') + ',' + q('-EncodedCommand') + ',' + q(b64) + '); ' +
+    "if ($p) { 'EXIT=' + $p.ExitCode } else { 'EXIT=?' }", 180000);
+  const m = r.out.match(/EXIT=(-?\d+)/);
+  return { ok: !!m && m[1] === '0', err: (r.err || '').trim().slice(0, 200) };
 }
 
 async function applyMark(root, name, bytes) {
@@ -160,7 +156,10 @@ export const ACTIONS = {
     level: 'L0',
     reversible: false,
     async run(target) {
-      const uri = (target && target.uri) || 'ms-settings:';
+      const want = (target && target.uri) || 'ms-settings:';
+      // 只放行系统设置页。这个参数会交给 cmd /c start，必须在这里再挡一次，
+      // 否则本地接口被别的页面敲进来时，什么路径/网址都能被它打开。
+      const uri = /^ms-settings:[a-z0-9]*$/i.test(want) ? want : 'ms-settings:';
       await new Promise(res => {
         const p = spawn('cmd', ['/c', 'start', '', uri], { windowsHide: true, detached: true, stdio: 'ignore' });
         p.on('close', res); p.on('error', res);

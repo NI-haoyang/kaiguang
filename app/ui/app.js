@@ -7,7 +7,10 @@ const S = { report: null, analysis: null, journal: [], cards: [], picked: new Se
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
 async function api(path, body) {
-  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  // 本地服务只认自己页面下发的 token（页面里由服务端注入 window.KG_TOKEN）
+  const headers = { 'Content-Type': 'application/json' };
+  if (window.KG_TOKEN) headers['X-KG-Token'] = window.KG_TOKEN;
+  const r = await fetch(path, body ? { method: 'POST', headers, body: JSON.stringify(body) } : { headers });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.detail || j.error || ('HTTP ' + r.status));
   return j;
