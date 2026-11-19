@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { buildFindings } from './lib/analyze.mjs';
 import { ACTIONS } from './lib/actions.mjs';
 import * as journal from './lib/journal.mjs';
-import { aiOn, aiStep, localStep, normalizeCards } from './lib/llm.mjs';
+import { aiOn, aiStep, buildCards, localStep, normalizeCards } from './lib/llm.mjs';
+import { answer } from './lib/ask.mjs';
 import * as settings from './lib/settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -35,7 +36,7 @@ function originOk(req) {
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
-const S = { report: null, analysis: null, step: 0, facts: {}, history: [], scan: { running: false, lines: [], error: null } };
+const S = { report: null, analysis: null, step: 0, facts: {}, history: [], lastCards: [], scan: { running: false, lines: [], error: null } };
 
 function loadCache() {
   try {
@@ -119,21 +120,50 @@ async function handle(req, res) {
   if (p === '/api/chat' && req.method === 'POST') {
     const { text } = await readBody(req);
     if (!S.report) return json(res, { error: '还没体检' }, 400);
-    if (text) { S.history.push({ role: 'user', text }); }
+    const raw = String(text || '');
+    if (raw) { S.history.push({ role: 'user', text: raw }); }
 
-    if (S.step >= 1 && text) {
-      if (/wps/i.test(text)) S.facts.office = 'wps';
-      else if (/office|365/i.test(text)) S.facts.office = 'office';
+    // 办公套件留哪个：整段对话里任何时候说都算数，卡片会跟着换
+    let pick = null;
+    if (/都留|都别动|不卸|别动/.test(raw)) pick = 'none';
+    else {
+      const m = raw.match(/(?:留|要留|用|选)\s*(wps|office|365)/i) || raw.match(/(wps|office|365)\s*(?:就行|就好|可以|留着)/i);
+      if (m) pick = /wps/i.test(m[1]) ? 'wps' : 'office';
     }
+    const changed = !!pick && pick !== (S.facts.office || '');
+    if (pick) S.facts.office = pick;
 
-    let out;
-    if (aiOn()) {
+    const ctx = { report: S.report, analysis: S.analysis, facts: S.facts };
+    let out = null;
+
+    if (changed) {
+      const label = pick === 'wps' ? 'WPS' : pick === 'office' ? 'Office' : '';
+      out = pick === 'none'
+        ? { say: '好，三个办公套件都留着，这块我不动。下面按其他几项给你列。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) }
+        : { say: '好，那就留 ' + label + '。下面这几条换成了对应的版本——要卸的变成另外两个。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
+    } else if (S.step >= 99) {
+      // 已经在看动作了：这句按问答处理，不再重复列表。
+      // 问答里给出的单条动作另起一组，不覆盖上面那张清单。
+      out = answer(raw, ctx) || { say: '这个我没把握。说具体一点——比如某个软件的名字，或者问「哪些能删」「怎么撤销」。' };
+      if (out.cards) out.keepPrev = true;
+    } else if (aiOn()) {
       try { out = await aiStep({ step: S.step, facts: S.facts }, S.report, S.analysis, S.history); }
       catch (e) { out = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis); out.say = '（AI 没连上，先用本地规则给你结论）\n' + out.say; }
     } else {
       out = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis);
     }
     if (out.cards) out.cards = normalizeCards(out.cards, S.report);
+    // 问答补的动作如果清单里已经有了，就不要再叠一张一模一样的卡
+    if (out.cards && out.keepPrev) {
+      const key = (c) => c.action + '|' + ((c.target && (c.target.name || c.target.uri)) || '');
+      const have = new Set((S.lastCards || []).map(key));
+      const uniq = out.cards.filter((c) => !have.has(key(c)));
+      if (!uniq.length) {
+        out.cards = null;
+        out.say += String.fromCharCode(10) + '这条已经在上面那张清单里了，直接在上面那张卡上勾就行。';
+      } else out.cards = uniq;
+    }
+    if (out.cards && !out.keepPrev) S.lastCards = out.cards;
     S.history.push({ role: 'ai', text: out.say, cards: out.cards || null, ask: out.ask || null });
     S.step = out.cards ? 99 : S.step + 1;
     return json(res, out);

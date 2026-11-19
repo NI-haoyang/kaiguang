@@ -124,7 +124,7 @@ export function localStep(state, report, analysis) {
   }
 
   if (state.step >= 99) {
-    return { say: '上面那几条你挑着做就行。想问哪一条能不能删、删了会怎样，直接问我。' };
+    return { say: '上面那几条想动哪条直接说；想问我某个软件能不能删，把名字打全一点。' };
   }
   return { say: '按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。', cards: buildCards(state, report, a) };
 }
@@ -135,7 +135,7 @@ const PRELOAD = /autolaunch|preload|updater|update|assistant|助手/i;
 
 function cardIsDecor(s) { return DECO.test(s.name); }
 
-function buildCards(state, report, a) {
+export function buildCards(state, report, a) {
   const cards = [];
   const byId = Object.fromEntries(a.findings.map(x => [x.id, x]));
   const startup = report.startup || [];
@@ -164,7 +164,7 @@ function buildCards(state, report, a) {
 
   // ③ 多余的办公套件（按用户的选择留一个）——用户刚回答过，要让它有下文
   const dup = byId.dup_office;
-  if (dup && room() > 0) {
+  if (dup && room() > 0 && (state.facts || {}).office !== 'none') {
     const want = (state.facts && state.facts.office) || '';
     let keep = dup.items[0];
     if (want === 'wps') keep = dup.items.find(n => /WPS/i.test(n)) || keep;

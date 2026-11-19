@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFindings } from '../app/lib/analyze.mjs';
 import { localStep } from '../app/lib/llm.mjs';
+import { answer } from '../app/lib/ask.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -26,6 +27,13 @@ const data = {
     office: localStep({ step: 2, facts: { office: 'office' } }, report, analysis),
     keep: localStep({ step: 2, facts: {} }, report, analysis),
   },
+  // 追问：跟桌面版同一套本地问答，构建时算好塞进页面
+  answers: [
+    { re: '哪些能删|能删什么|推荐删', say: answer('哪些能删', { report, analysis, facts: { office: 'wps' } }).say },
+    { re: '怎么撤销|能退回|后悔', say: answer('怎么撤销', { report, analysis, facts: {} }).say },
+    { re: '迈克菲|mcafee', say: answer('迈克菲能删吗', { report, analysis, facts: { office: 'wps' } }).say },
+    { re: '火绒', say: answer('火绒能删吗', { report, analysis, facts: {} }).say },
+  ],
 };
 
 const demoCss = read('app/ui/app.css') + [

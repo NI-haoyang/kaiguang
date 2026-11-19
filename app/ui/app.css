@@ -172,3 +172,4 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 /* Electron 桌面壳：窗口无边框，头部当拖动手柄，右侧留出系统按钮的位置 */
 body.desktop .top{-webkit-app-region:drag;padding-right:150px}
 body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
+.hint{font-size:12px;color:var(--dim2)}

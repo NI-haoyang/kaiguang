@@ -56,11 +56,14 @@ window.fetch = async (url, opt) => {
     const text = String(body.text || '');
     if (!text) { SIM.step = 1; return j(DATA.greet); }
     if (SIM.step <= 1) { SIM.step = 2; return j(DATA.ask2); }
-    if (SIM.step === 2) {
-      SIM.step = 3;
-      const v = /wps/i.test(text) ? 'wps' : /office|365/i.test(text) ? 'office' : 'keep';
-      return j(DATA.variants[v]);
-    }
+    // 任何时候说「留 WPS / 留 Office」都换一版卡片
+    const isWps = /留\s*wps|wps.{0,4}(留|就行)/i.test(text);
+    const isOffice = /留\s*office|office.{0,4}(留|就行)/i.test(text);
+    if (isWps || isOffice) { SIM.step = 3; return j(DATA.variants[isWps ? 'wps' : 'office']); }
+    if (SIM.step === 2) { SIM.step = 3; return j(DATA.variants.keep); }
+    // 卡片出来以后可以追问；答案在构建时由真实的本地问答模块算好
+    const hit = (DATA.answers || []).find(a => new RegExp(a.re, 'i').test(text));
+    if (hit) return j({ say: hit.say });
     return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。' });
   }
   if (p === '/api/execute') return j(execCard(body.card || {}));

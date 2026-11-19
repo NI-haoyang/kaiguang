@@ -11,7 +11,8 @@ async function boot() {
   const entry = pathToFileURL(path.join(__dirname, '..', 'server.mjs')).href;
   const mod = await import(entry);
   server = await mod.start(0);                       // 0 = 让系统挑一个空闲端口
-  const url = 'http://127.0.0.1:' + server.port + '/';
+  // KG_URL 只给回归测试用：直接把窗口指到某个页面（比如静态演示 html）
+  const url = process.env.KG_URL || ('http://127.0.0.1:' + server.port + '/');
 
   win = new BrowserWindow({
     width: 1380, height: 900, minWidth: 1180, minHeight: 700,
@@ -60,6 +61,26 @@ async function boot() {
           await wait(2600);
         }
         console.log('drive done: cards=' + await js("document.querySelectorAll('.card').length"));
+
+        if (process.env.KG_DRIVE === 'ask') {
+          const snap = async () => await js("JSON.stringify({setCount: document.querySelectorAll('#thread .cards').length, picked: document.querySelectorAll('.card.pick').length, go: (document.querySelector('#go')||{}).textContent, lastSay: ([...document.querySelectorAll('.msg.ai .body')].pop()||{}).textContent, titles: [...document.querySelectorAll('.card h3')].map(h => h.textContent)})");
+          const before = JSON.parse(await snap());
+          // 点卡片标题（不是那个小方块），看整卡能不能勾上 / 取消
+          await js("(() => { const c = document.querySelectorAll('.card')[1]; const h = c && c.querySelector('h3'); h && h.click(); return true; })()");
+          await wait(350);
+          const afterClick = JSON.parse(await snap());
+          // 改主意：留 Office，卡片应该整组换掉
+          await js("(() => { const i = document.querySelector('#input'); i.value = '留 Office'; document.querySelector('#send').click(); return true; })()");
+          await wait(2400);
+          const afterSwitch = JSON.parse(await snap());
+          // 追问一个具体软件
+          await js("(() => { const i = document.querySelector('#input'); i.value = '迈克菲能删吗'; document.querySelector('#send').click(); return true; })()");
+          await wait(2000);
+          const afterAsk = JSON.parse(await snap());
+          const out = { before, afterClick, afterSwitch, afterAsk };
+          if (process.env.KG_DRIVE_OUT) require('node:fs').writeFileSync(process.env.KG_DRIVE_OUT, JSON.stringify(out, null, 2), 'utf8');
+          console.log('drive ask: ' + JSON.stringify(out));
+        }
       } catch (e) { console.error('drive failed', e); }
       if (process.env.KG_SHOT) {
         try { require('node:fs').writeFileSync(process.env.KG_SHOT, (await win.webContents.capturePage()).toPNG()); } catch {}

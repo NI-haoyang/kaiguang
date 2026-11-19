@@ -162,12 +162,14 @@ function send(text) {
   api('/api/chat', { text }).then(out => {
     const m = bubble('ai', out.say);
     if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || ['好', '不用了'], send));
-    if (out.cards) renderCards(out.cards);
+    if (out.cards) renderCards(out.cards, !out.keepPrev);
   }).catch(e => bubble('ai', '出错了：' + e.message)).finally(() => { S.busy = false; });
 }
 
 /* ---------------- 卡片 ---------------- */
-function renderCards(cards) {
+function renderCards(cards, replace = true) {
+  // 重新规划时替换上一组；问答里补的单条动作另起一组，不覆盖原清单
+  if (replace) document.querySelectorAll('#thread .cards').forEach(n => n.remove());
   S.cards = cards; S.picked = new Set();
   const wrap = el('div', 'cards');
   if (!cards.length) {
@@ -179,14 +181,15 @@ function renderCards(cards) {
     const box = el('div', 'card' + (isLink ? ' link' : '') + (isLink ? '' : ' pick'));
     const row = el('div', 'row');
     if (!isLink) {
-      const pick = el('div', 'box');
-      pick.onclick = () => {
+      row.append(el('div', 'box'));
+      S.picked.add(i);
+      // 整张卡片都能点，不用非得戳那个小方块
+      box.onclick = (e) => {
+        if (e.target.closest('button, a')) return;
         if (S.picked.has(i)) { S.picked.delete(i); box.classList.remove('pick'); }
         else { S.picked.add(i); box.classList.add('pick'); }
         syncBar();
       };
-      S.picked.add(i);
-      row.append(pick);
     }
     const main = el('div');
     main.append(el('h3', null, c.title), el('p', null, c.why));
@@ -211,10 +214,13 @@ function renderCards(cards) {
 
   const bar = el('div', 'actionbar');
   bar.id = 'bar';
+  // 多组卡片时只让最新那个按钮持有 #go，旧的留在屏幕上但不再被选中
+  document.querySelectorAll('#go').forEach(n => n.removeAttribute('id'));
   const go = el('button', 'btn primary', '执行选中的 0 项');
   go.id = 'go';
   go.onclick = executeSelected;
-  bar.append(go);
+  S.goEl = go;
+  bar.append(go, el('span', 'hint', '点卡片任意位置都能勾选 / 取消'));
   wrap.append(bar);
   $('#thread').append(wrap);
   scroll();
@@ -222,7 +228,7 @@ function renderCards(cards) {
 }
 
 function syncBar() {
-  const go = $('#go');
+  const go = S.goEl;
   if (!go) return;
   go.textContent = '执行选中的 ' + S.picked.size + ' 项';
   go.disabled = S.picked.size === 0;
@@ -231,7 +237,7 @@ function syncBar() {
 async function executeSelected() {
   if (S.busy) return;
   S.busy = true;
-  const go = $('#go');
+  const go = S.goEl;
   go.disabled = true;
   const list = [...S.picked].map(i => S.cards[i]).filter(Boolean);
   let ok = 0, bad = 0;
@@ -263,7 +269,7 @@ async function executeSelected() {
 
   const done = S.journal.filter(e => e.revert && !e.undone);
   if (done.length) {
-    const bar = $('#bar');
+    const bar = S.goEl.parentElement;
     const undoAll = el('button', 'btn ghost', '全部撤销（' + done.length + '）');
     undoAll.onclick = async () => {
       undoAll.disabled = true;

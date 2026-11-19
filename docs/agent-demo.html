@@ -179,6 +179,7 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 /* Electron 桌面壳：窗口无边框，头部当拖动手柄，右侧留出系统按钮的位置 */
 body.desktop .top{-webkit-app-region:drag;padding-right:150px}
 body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
+.hint{font-size:12px;color:var(--dim2)}
 .demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
 .demo-bar b{font-weight:700}
 .demo-bar span{opacity:.78}
@@ -253,7 +254,7 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 
 <script>
 /* 静态演示用的假后端：动作全是模拟的，不碰用户的电脑。由 tools/build-agent-demo.mjs 内联进页面。 */
-const DATA = {"report":{"counts":{"apps":76,"startup":10,"services":23},"machine":"FRANKNI","system":{"osName":"Microsoft Windows 11 家庭版 中文版","osBuild":"26200","arch":"64 位","installedAt":null,"lastBoot":null,"manufacturer":"ASUS","model":"TX Gaming FX608LMG","ramGB":15.4,"cpu":"Intel(R) Core(TM) Ultra 7 251HX","cpuCores":18,"cpuThreads":18}},"analysis":{"score":70,"findings":[{"level":"high","tone":"info","id":"firewall_off","title":"防火墙关着：Private、Public 网络","detail":"在宿舍、咖啡店这类公共 Wi-Fi 下，防火墙是挡住局域网扫描的第一道门。关掉它通常是装某个软件时被引导关的，之后就忘了开回来。","fix":"设置 → 隐私和安全性 → Windows 安全中心 → 防火墙和网络保护，把「专用」和「公用」都打开。","action":"open_settings","args":{"uri":"ms-settings:windowsdefender"},"badge":"带到设置页","cta":"打开设置页"},{"level":"warn","tone":"warn","id":"av_overlap","title":"同时装了 2 套安全/管家软件","detail":"两套以上的实时防护会互相把对方扫一遍，文件操作明显变慢，还容易出现「一个拦一个」的弹窗打架。Windows 只需要一套实时防护。","fix":"只留一套（火绒这类轻量的就够），其余卸载干净，重启后再看安全中心有没有恢复正常。","items":["火绒安全软件","迈克菲联网顾问"]},{"level":"ok","tone":"ok","id":"startup_ok","title":"开机自启 10 个，不多","detail":"这个数量在正常范围。"},{"level":"info","tone":"info","id":"svc_many","title":"23 个第三方服务开机自启","detail":"这些不是病毒，是厂商为了让「功能随时可用」装的常驻服务。代价是内存和后台唤醒。"},{"level":"ok","tone":"ok","id":"disk_ok","title":"C: 空间健康（剩 46%，191.6 GB）","detail":"系统盘保持 20% 以上余量，更新和虚拟内存都不会卡。"},{"level":"warn","tone":"warn","id":"dup_office","title":"装了 3 个办公套件","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["微软OfficePLUS","Microsoft 365 - zh-cn","WPS Office (12.1.0.29690)"],"catId":"office"},{"level":"info","tone":"info","id":"dup_browser","title":"装了 3 个浏览器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["Google Chrome","Microsoft Edge","夸克"],"catId":"browser"},{"level":"info","tone":"info","id":"dup_video","title":"装了 3 个视频客户端","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["哔哩哔哩","腾讯视频","抖音"],"catId":"video"},{"level":"info","tone":"info","id":"dup_accel","title":"装了 3 个网络/游戏加速器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["FlClash 版本 0.9.1+2026101702","UU加速器","迅游加速器"],"catId":"accel"},{"level":"info","tone":"info","id":"oem_bloat","title":"品牌预装组件 12 个","detail":"整机厂为了灯效、风扇曲线、投屏、桌宠装了一整套。功能是真的，但没必要全部开机就运行。","items":["Armoury Crate Service","ASUS Hotplug Controller","ROG Live Service","ASUS MS Control","GlideX Service Installer","AURA lighting effect add-on x64","ASUS Monitor Control","AURA Service","AURA lighting effect add-on","ROG FALCHION ACE HFX","ASUS Framework Service","ASUS Smart Display Control"]},{"level":"info","tone":"info","id":"secureboot_off","title":"安全启动是关的","detail":"关掉通常是为了装双系统或某些驱动。日常使用开着更安全，但它不影响开荒，先记一笔。"}],"counts":{"high":1,"warn":2,"info":6},"verify":{"tone":"high","title":"这台不是刚拆封的机器","detail":"系统装好 80 天，电池健康 98%。如果你是按新机买的，值得确认一下是不是样机或退换机。"},"metrics":{"freePct":46,"battHealth":98,"days":80}},"greet":{"say":"体检完了。这台是 ASUS TX Gaming FX608LMG，Windows 11 家庭版 中文版，装了 76 个软件——其中华硕自己就占了 12 个。C: 盘还剩 46%，这块不用管。","ask":{"question":"先问一句：这台主要拿来干嘛？","chips":["学习为主","打游戏","剪视频 / 做设计","写代码","什么都干"]}},"ask2":{"say":"明白。第二个问题跟你手上的软件有关：你现在有三个办公套件——微软OfficePLUS、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690)。三个都装着，每次打开文档它们都在抢「默认打开方式」。","ask":{"question":"留哪个？","chips":["留 WPS","留 Office","都留着，别动"]}},"variants":{"wps":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"微软OfficePLUS"},"title":"卸载 微软OfficePLUS","why":"保留 WPS Office (12.1.0.29690) 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 WPS Office (12.1.0.29690) 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]},"office":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"WPS Office (12.1.0.29690)"},"title":"卸载 WPS Office (12.1.0.29690)","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]},"keep":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"WPS Office (12.1.0.29690)"},"title":"卸载 WPS Office (12.1.0.29690)","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]}}};
+const DATA = {"report":{"counts":{"apps":76,"startup":10,"services":23},"machine":"FRANKNI","system":{"osName":"Microsoft Windows 11 家庭版 中文版","osBuild":"26200","arch":"64 位","installedAt":null,"lastBoot":null,"manufacturer":"ASUS","model":"TX Gaming FX608LMG","ramGB":15.4,"cpu":"Intel(R) Core(TM) Ultra 7 251HX","cpuCores":18,"cpuThreads":18}},"analysis":{"score":70,"findings":[{"level":"high","tone":"info","id":"firewall_off","title":"防火墙关着：Private、Public 网络","detail":"在宿舍、咖啡店这类公共 Wi-Fi 下，防火墙是挡住局域网扫描的第一道门。关掉它通常是装某个软件时被引导关的，之后就忘了开回来。","fix":"设置 → 隐私和安全性 → Windows 安全中心 → 防火墙和网络保护，把「专用」和「公用」都打开。","action":"open_settings","args":{"uri":"ms-settings:windowsdefender"},"badge":"带到设置页","cta":"打开设置页"},{"level":"warn","tone":"warn","id":"av_overlap","title":"同时装了 2 套安全/管家软件","detail":"两套以上的实时防护会互相把对方扫一遍，文件操作明显变慢，还容易出现「一个拦一个」的弹窗打架。Windows 只需要一套实时防护。","fix":"只留一套（火绒这类轻量的就够），其余卸载干净，重启后再看安全中心有没有恢复正常。","items":["火绒安全软件","迈克菲联网顾问"]},{"level":"ok","tone":"ok","id":"startup_ok","title":"开机自启 10 个，不多","detail":"这个数量在正常范围。"},{"level":"info","tone":"info","id":"svc_many","title":"23 个第三方服务开机自启","detail":"这些不是病毒，是厂商为了让「功能随时可用」装的常驻服务。代价是内存和后台唤醒。"},{"level":"ok","tone":"ok","id":"disk_ok","title":"C: 空间健康（剩 46%，191.6 GB）","detail":"系统盘保持 20% 以上余量，更新和虚拟内存都不会卡。"},{"level":"warn","tone":"warn","id":"dup_office","title":"装了 3 个办公套件","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["微软OfficePLUS","Microsoft 365 - zh-cn","WPS Office (12.1.0.29690)"],"catId":"office"},{"level":"info","tone":"info","id":"dup_browser","title":"装了 3 个浏览器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["Google Chrome","Microsoft Edge","夸克"],"catId":"browser"},{"level":"info","tone":"info","id":"dup_video","title":"装了 3 个视频客户端","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["哔哩哔哩","腾讯视频","抖音"],"catId":"video"},{"level":"info","tone":"info","id":"dup_accel","title":"装了 3 个网络/游戏加速器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["FlClash 版本 0.9.1+2026101702","UU加速器","迅游加速器"],"catId":"accel"},{"level":"info","tone":"info","id":"oem_bloat","title":"品牌预装组件 12 个","detail":"整机厂为了灯效、风扇曲线、投屏、桌宠装了一整套。功能是真的，但没必要全部开机就运行。","items":["Armoury Crate Service","ASUS Hotplug Controller","ROG Live Service","ASUS MS Control","GlideX Service Installer","AURA lighting effect add-on x64","ASUS Monitor Control","AURA Service","AURA lighting effect add-on","ROG FALCHION ACE HFX","ASUS Framework Service","ASUS Smart Display Control"]},{"level":"info","tone":"info","id":"secureboot_off","title":"安全启动是关的","detail":"关掉通常是为了装双系统或某些驱动。日常使用开着更安全，但它不影响开荒，先记一笔。"}],"counts":{"high":1,"warn":2,"info":6},"verify":{"tone":"high","title":"这台不是刚拆封的机器","detail":"系统装好 80 天，电池健康 98%。如果你是按新机买的，值得确认一下是不是样机或退换机。"},"metrics":{"freePct":46,"battHealth":98,"days":80}},"greet":{"say":"体检完了。这台是 ASUS TX Gaming FX608LMG，Windows 11 家庭版 中文版，装了 76 个软件——其中华硕自己就占了 12 个。C: 盘还剩 46%，这块不用管。","ask":{"question":"先问一句：这台主要拿来干嘛？","chips":["学习为主","打游戏","剪视频 / 做设计","写代码","什么都干"]}},"ask2":{"say":"明白。第二个问题跟你手上的软件有关：你现在有三个办公套件——微软OfficePLUS、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690)。三个都装着，每次打开文档它们都在抢「默认打开方式」。","ask":{"question":"留哪个？","chips":["留 WPS","留 Office","都留着，别动"]}},"variants":{"wps":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"微软OfficePLUS"},"title":"卸载 微软OfficePLUS","why":"保留 WPS Office (12.1.0.29690) 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 WPS Office (12.1.0.29690) 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]},"office":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"WPS Office (12.1.0.29690)"},"title":"卸载 WPS Office (12.1.0.29690)","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]},"keep":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"uninstall_app","target":{"name":"迈克菲联网顾问"},"title":"卸载 迈克菲联网顾问","why":"已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"Microsoft 365 - zh-cn"},"title":"卸载 Microsoft 365 - zh-cn","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"uninstall_app","target":{"name":"WPS Office (12.1.0.29690)"},"title":"卸载 WPS Office (12.1.0.29690)","why":"保留 微软OfficePLUS 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。","badge":"可撤销 · 约 15 秒"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"}]}},"answers":[{"re":"哪些能删|能删什么|推荐删","say":"按你这台机器的数据，这几条是最值得动的：\n1. 迈克菲联网顾问——已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件。\n2. 微软OfficePLUS——你说留 WPS，这个就重复了。\n3. Microsoft 365 - zh-cn——你说留 WPS，这个就重复了。\n\n卸载的撤销 = 用 winget 装回最新版；登录态和本地数据不保证回来。"},{"re":"怎么撤销|能退回|后悔","say":"关自启的撤销是把注册表原标记写回去，基本是精确还原；卸载的撤销是用 winget 装回最新版——程序能回来，但登录态和本地数据不保证。所以「能退」不等于「当没发生」，这条我写在材料里了。"},{"re":"迈克菲|mcafee","say":"「迈克菲联网顾问」是安全 / 管家软件（发布者 McAfee, LLC）。可以卸。你已经有「火绒安全软件」在做实时防护，两套同时开着，装软件、解压、编译这一类操作会明显变慢。\n撤销 = 用 winget 装回最新版，登录态不保证。"},{"re":"火绒","say":"「火绒安全软件」是安全 / 管家软件（发布者 北京火绒网络科技有限公司，2026-10-27 装上的）。这一套是我建议留下的，其余的卸掉就行。"}]};
 const STEP_LABELS = ['读系统与硬件','看磁盘空间','数一遍装了多少软件','检查开机自启','看后台服务','查防火墙和防护状态','验机：电池、硬盘、安装天数','整理成报告'];
 const SIM = { journal: [], step: 0, lines: [], running: false, reported: false, started: 0 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -310,11 +311,14 @@ window.fetch = async (url, opt) => {
     const text = String(body.text || '');
     if (!text) { SIM.step = 1; return j(DATA.greet); }
     if (SIM.step <= 1) { SIM.step = 2; return j(DATA.ask2); }
-    if (SIM.step === 2) {
-      SIM.step = 3;
-      const v = /wps/i.test(text) ? 'wps' : /office|365/i.test(text) ? 'office' : 'keep';
-      return j(DATA.variants[v]);
-    }
+    // 任何时候说「留 WPS / 留 Office」都换一版卡片
+    const isWps = /留\s*wps|wps.{0,4}(留|就行)/i.test(text);
+    const isOffice = /留\s*office|office.{0,4}(留|就行)/i.test(text);
+    if (isWps || isOffice) { SIM.step = 3; return j(DATA.variants[isWps ? 'wps' : 'office']); }
+    if (SIM.step === 2) { SIM.step = 3; return j(DATA.variants.keep); }
+    // 卡片出来以后可以追问；答案在构建时由真实的本地问答模块算好
+    const hit = (DATA.answers || []).find(a => new RegExp(a.re, 'i').test(text));
+    if (hit) return j({ say: hit.say });
     return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。' });
   }
   if (p === '/api/execute') return j(execCard(body.card || {}));
@@ -339,7 +343,6 @@ window.addEventListener('load', () => {
     pill.onclick = null;
   }
 });
-
 </script>
 <script>
 if (window.kgDesktop) document.body.classList.add('desktop');
@@ -506,12 +509,14 @@ function send(text) {
   api('/api/chat', { text }).then(out => {
     const m = bubble('ai', out.say);
     if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || ['好', '不用了'], send));
-    if (out.cards) renderCards(out.cards);
+    if (out.cards) renderCards(out.cards, !out.keepPrev);
   }).catch(e => bubble('ai', '出错了：' + e.message)).finally(() => { S.busy = false; });
 }
 
 /* ---------------- 卡片 ---------------- */
-function renderCards(cards) {
+function renderCards(cards, replace = true) {
+  // 重新规划时替换上一组；问答里补的单条动作另起一组，不覆盖原清单
+  if (replace) document.querySelectorAll('#thread .cards').forEach(n => n.remove());
   S.cards = cards; S.picked = new Set();
   const wrap = el('div', 'cards');
   if (!cards.length) {
@@ -523,14 +528,15 @@ function renderCards(cards) {
     const box = el('div', 'card' + (isLink ? ' link' : '') + (isLink ? '' : ' pick'));
     const row = el('div', 'row');
     if (!isLink) {
-      const pick = el('div', 'box');
-      pick.onclick = () => {
+      row.append(el('div', 'box'));
+      S.picked.add(i);
+      // 整张卡片都能点，不用非得戳那个小方块
+      box.onclick = (e) => {
+        if (e.target.closest('button, a')) return;
         if (S.picked.has(i)) { S.picked.delete(i); box.classList.remove('pick'); }
         else { S.picked.add(i); box.classList.add('pick'); }
         syncBar();
       };
-      S.picked.add(i);
-      row.append(pick);
     }
     const main = el('div');
     main.append(el('h3', null, c.title), el('p', null, c.why));
@@ -555,10 +561,13 @@ function renderCards(cards) {
 
   const bar = el('div', 'actionbar');
   bar.id = 'bar';
+  // 多组卡片时只让最新那个按钮持有 #go，旧的留在屏幕上但不再被选中
+  document.querySelectorAll('#go').forEach(n => n.removeAttribute('id'));
   const go = el('button', 'btn primary', '执行选中的 0 项');
   go.id = 'go';
   go.onclick = executeSelected;
-  bar.append(go);
+  S.goEl = go;
+  bar.append(go, el('span', 'hint', '点卡片任意位置都能勾选 / 取消'));
   wrap.append(bar);
   $('#thread').append(wrap);
   scroll();
@@ -566,7 +575,7 @@ function renderCards(cards) {
 }
 
 function syncBar() {
-  const go = $('#go');
+  const go = S.goEl;
   if (!go) return;
   go.textContent = '执行选中的 ' + S.picked.size + ' 项';
   go.disabled = S.picked.size === 0;
@@ -575,7 +584,7 @@ function syncBar() {
 async function executeSelected() {
   if (S.busy) return;
   S.busy = true;
-  const go = $('#go');
+  const go = S.goEl;
   go.disabled = true;
   const list = [...S.picked].map(i => S.cards[i]).filter(Boolean);
   let ok = 0, bad = 0;
@@ -607,7 +616,7 @@ async function executeSelected() {
 
   const done = S.journal.filter(e => e.revert && !e.undone);
   if (done.length) {
-    const bar = $('#bar');
+    const bar = S.goEl.parentElement;
     const undoAll = el('button', 'btn ghost', '全部撤销（' + done.length + '）');
     undoAll.onclick = async () => {
       undoAll.disabled = true;
