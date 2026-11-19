@@ -19,24 +19,66 @@ export function runPS(script, timeoutMs = 120000) {
 }
 
 const q = (s) => "'" + String(s).replace(/'/g, "''") + "'";
-const APPROVED = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
+// StartupApproved 的开关按注册表根分开存：HKCU 的启动项看 HKCU 那份，HKLM 的看 HKLM 那份。
+// 写错根 = 写了也没人看。这里踩过坑：整机级自启报「已关闭」，实际照样开机启动。
+const APPROVED_SUB = '\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run';
+const DISABLED = [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-async function readApproved(name) {
-  const script = '$k = ' + q(APPROVED) + '; $v = (Get-ItemProperty -Path $k -Name ' + q(name) + ' -ErrorAction SilentlyContinue).' + q(name) + '; ' +
+function rootOf(target) {
+  const s = String((target && target.source) || '').toUpperCase();
+  return s.startsWith('HKLM') ? 'HKLM' : 'HKCU';
+}
+const approvedPath = (root) => root + ':' + APPROVED_SUB;
+
+let _admin = null;
+async function isAdmin() {
+  if (_admin !== null) return _admin;
+  const r = await runPS('([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)', 15000);
+  _admin = /True/i.test(r.out);
+  return _admin;
+}
+
+async function readApproved(root, name) {
+  const script = '$k = ' + q(approvedPath(root)) + '; $v = (Get-ItemProperty -Path $k -Name ' + q(name) + ' -ErrorAction SilentlyContinue).' + q(name) + '; ' +
     "if ($null -eq $v) { 'NONE' } else { 'B' + ($v -join ',') }";
   const r = await runPS(script, 20000);
   const line = r.out.trim().split(/\r?\n/).filter(Boolean).pop() || 'NONE';
   if (!/^B/.test(line)) return { exists: false };
   return { exists: true, bytes: line.slice(1).split(',').map(Number) };
 }
-const RUN_REG = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 
-function parseRegValue(stdout) {
-  for (const line of stdout.split(/\r?\n/)) {
-    const m = line.match(/^\s{4}(.+?)\s{4}(REG_[A-Z_]+)\s{4}([\s\S]*)$/);
-    if (m) return { name: m[1], kind: m[2], value: m[3] };
-  }
-  return null;
+function setScript(root, name, bytes) {
+  const k = q(approvedPath(root));
+  return 'if (-not (Test-Path ' + k + ')) { New-Item -Path ' + k + ' -Force | Out-Null }; ' +
+    'Set-ItemProperty -Path ' + k + ' -Name ' + q(name) + ' -Value ([byte[]](' + bytes.join(',') + ')) -Type Binary';
+}
+function delScript(root, name) {
+  return 'Remove-ItemProperty -Path ' + q(approvedPath(root)) + ' -Name ' + q(name) + ' -ErrorAction SilentlyContinue';
+}
+
+// 整机级（HKLM）必须管理员。不偷偷提权：弹一次 UAC，点了「是」才写，点了「否」就当没发生。
+async function elevate(script) {
+  const file = path.join(os.tmpdir(), 'kg_elev_' + Date.now() + '.ps1');
+  fs.writeFileSync(file, "$ErrorActionPreference = 'Stop'\r\n" + script + '\r\n', 'utf8');
+  try {
+    const r = await runPS(
+      '$p = Start-Process -FilePath powershell -Verb RunAs -Wait -WindowStyle Hidden -PassThru ' +
+      '-ArgumentList @(' + q('-NoProfile') + ',' + q('-ExecutionPolicy') + ',' + q('Bypass') + ',' + q('-File') + ',' + q(file) + '); ' +
+      "if ($p) { 'EXIT=' + $p.ExitCode } else { 'EXIT=?' }", 180000);
+    const m = r.out.match(/EXIT=(-?\d+)/);
+    return { ok: !!m && m[1] === '0', err: (r.err || '').trim().slice(0, 200) };
+  } finally { try { fs.unlinkSync(file); } catch {} }
+}
+
+async function applyMark(root, name, bytes) {
+  if (root === 'HKLM' && !(await isAdmin())) return elevate(setScript(root, name, bytes));
+  const r = await runPS(setScript(root, name, bytes), 20000);
+  return { ok: r.code === 0, err: (r.err || '').trim().slice(0, 160) };
+}
+async function clearMark(root, name) {
+  if (root === 'HKLM' && !(await isAdmin())) return elevate(delScript(root, name));
+  const r = await runPS(delScript(root, name), 20000);
+  return { ok: r.code === 0 };
 }
 
 export const ACTIONS = {
@@ -44,28 +86,28 @@ export const ACTIONS = {
     label: '关掉开机自启',
     level: 'L1',
     reversible: true,
-    // 用任务管理器同款做法：不改 Run 里的原条目，只写「启用/禁用」标记。
-    // 好处是一不需要管理员（HKLM 的项也能关），二是撤销就是把标记写回去，原条目一直在。
-    async check(target) {
-      const r = await runPS('[pscustomobject]@{ name = ' + q(target.name) + '; approved = (Test-Path ' + q(APPROVED) + ') } | ConvertTo-Json -Compress', 20000);
-      return { ok: true };
-    },
+    // 任务管理器同款做法：不改 Run 里的原条目，只写「禁用」标记；撤销 = 把原字节写回去。
+    // HKCU 的项直接写；HKLM 的项要管理员，弹一次 UAC，写不进去就如实报失败，绝不报「已完成」。
     async run(target) {
-      const prev = await readApproved(target.name);
-      const w = await runPS(
-        'if (-not (Test-Path ' + q(APPROVED) + ')) { New-Item -Path ' + q(APPROVED) + ' -Force | Out-Null }; ' +
-        'Set-ItemProperty -Path ' + q(APPROVED) + ' -Name ' + q(target.name) + ' -Value ([byte[]](3,0,0,0,0,0,0,0,0,0,0,0)) -Type Binary; ' +
-        'Test-Path ' + q(APPROVED), 20000);
-      if (w.code !== 0) return { ok: false, detail: '写入失败：' + (w.err || '').trim().slice(0, 160) };
-      return { ok: true, detail: '已关闭（原条目还在注册表里，只是不启动了）', revert: { kind: 'startup', name: target.name, prev: prev } };
+      const root = rootOf(target);
+      const prev = await readApproved(root, target.name);
+      const w = await applyMark(root, target.name, DISABLED);
+      if (!w.ok) {
+        const elev = root === 'HKLM' && !(await isAdmin());
+        return { ok: false, needsAdmin: elev, detail: elev ? '整机级自启要管理员，你取消了授权，这条我没动。' : '写入失败：' + (w.err || '') };
+      }
+      const now = await readApproved(root, target.name);
+      if (!(now.exists && now.bytes[0] === 3)) return { ok: false, detail: '写进去了，但回读不是「已禁用」——我不把它算成功。' };
+      return { ok: true, detail: '已关闭，并回读确认（原条目还在，只是不启动了）', revert: { kind: 'startup', root, name: target.name, prev } };
     },
     async revert(rev) {
-      if (rev.prev && rev.prev.exists) {
-        const r = await runPS('Set-ItemProperty -Path ' + q(APPROVED) + ' -Name ' + q(rev.name) + ' -Value ([byte[]](' + rev.prev.bytes.join(',') + ')) -Type Binary', 20000);
-        return { ok: r.code === 0, detail: '已恢复原标记' };
-      }
-      const r = await runPS('Remove-ItemProperty -Path ' + q(APPROVED) + ' -Name ' + q(rev.name) + ' -ErrorAction SilentlyContinue', 20000);
-      return { ok: true, detail: '已恢复（标记删除，回到默认启动）' };
+      const root = rev.root || 'HKCU';
+      const r = rev.prev && rev.prev.exists ? await applyMark(root, rev.name, rev.prev.bytes) : await clearMark(root, rev.name);
+      if (!r.ok) return { ok: false, needsAdmin: root === 'HKLM', detail: '恢复失败：这条需要管理员权限，我没能写回去。' };
+      const now = await readApproved(root, rev.name);
+      const want = rev.prev && rev.prev.exists ? rev.prev.bytes[0] : 2;
+      if (now.exists && now.bytes[0] !== want) return { ok: false, detail: '回读和原值不一致，我如实报失败。' };
+      return { ok: true, detail: '已恢复原标记（回读确认）' };
     },
   },
 
@@ -131,7 +173,7 @@ export const ACTIONS = {
 };
 
 export const CATALOG = [
-  { action: 'disable_startup', desc: '关掉一个开机自启项（仅当前用户，可撤销）', params: { name: '自启项名字，必须原样来自 startup 列表', source: '该自启项的 source 字段' } },
+  { action: 'disable_startup', desc: '关掉一个开机自启项（HKCU 直接关；整机级 HKLM 会弹一次 UAC，可撤销）', params: { name: '自启项名字，必须原样来自 startup 列表', source: '该自启项的 source 字段' } },
   { action: 'uninstall_app', desc: '用 winget 卸载一个软件，并记下 id 以便重装', params: { name: '软件全名，必须原样来自软件列表' } },
   { action: 'open_settings', desc: '不执行，只把 Windows 设置页打开给用户自己点（L2 的替代）', params: { uri: '如 ms-settings:windowsdefender' } },
 ];

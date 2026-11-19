@@ -99,6 +99,8 @@ function renderReport() {
   }
 }
 
+const ACTION_LABEL = { disable_startup: '关掉开机自启', uninstall_app: '卸载软件', open_settings: '打开设置页' };
+
 function renderLog() {
   const box = $('#log');
   box.innerHTML = '';
@@ -109,7 +111,7 @@ function renderLog() {
     const t = new Date(e.ts);
     box2.append(el('div', 't', t.toTimeString().slice(0, 8)));
     const row = el('div', 'n');
-    row.append(el('b', null, e.title || e.action));
+    row.append(el('b', null, e.title || ACTION_LABEL[e.action] || e.action));
     if (e.revert && !e.undone) {
       const u = el('span', 'undo', '撤销');
       u.onclick = () => undo(e.id, u);
@@ -187,7 +189,7 @@ function renderCards(cards) {
     main.append(el('h3', null, c.title), el('p', null, c.why));
     const meta = el('div', 'meta');
     meta.append(el('span', 'badge ' + (isLink ? 'warn' : 'rev'), c.badge));
-    if (!isLink) meta.append(el('span', 'badge', '不需要管理员'));
+    if (!isLink) meta.append(el('span', 'badge', c.needAdmin ? '要你点一次 UAC' : '不需要管理员'));
     main.append(meta);
     if (isLink) {
       const b = el('button', 'linkbtn', '打开设置页');

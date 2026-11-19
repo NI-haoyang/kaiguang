@@ -64,6 +64,7 @@ export function normalizeCards(raw, report) {
       const hit = startups.find(s => s.name === t.name) || startups.find(s => s.name.toLowerCase() === String(t.name || '').toLowerCase());
       if (!hit) continue;
       target = { name: hit.name, source: hit.source };
+      const needAdmin = /^HKLM/i.test(String(hit.source || ''));
       badge = '可撤销 · 约 0.3 秒';
     } else if (c.action === 'uninstall_app') {
       const hit = apps.find(a => a.name === t.name) || apps.find(a => a.name.toLowerCase() === String(t.name || '').toLowerCase());
@@ -77,7 +78,7 @@ export function normalizeCards(raw, report) {
       badge = '带到设置页';
     }
     out.push({
-      action: c.action, target,
+      action: c.action, target, needAdmin: /^HKLM/i.test(String((target && target.source) || '')),
       title: (() => { const t = String(c.title || def.label); return t.length > 28 ? t.slice(0, 27) + '…' : t; })(),
       why: String(c.why || '').slice(0, 160),
       badge,
@@ -189,7 +190,8 @@ function buildCards(state, report, a) {
       : PRELOAD.test(s2.name)
         ? '开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。'
         : '这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。';
-    cards.push({ action: 'disable_startup', target: { name: s2.name, source: s2.source },
+    const needAdmin = /^HKLM/i.test(String(s2.source || ''));
+    cards.push({ action: 'disable_startup', target: { name: s2.name, source: s2.source }, needAdmin,
       title: '关掉 ' + (s2.name.length > 22 ? s2.name.slice(0, 21) + '…' : s2.name) + ' 的开机自启',
       why, badge: '可撤销 · 约 0.3 秒' });
   }

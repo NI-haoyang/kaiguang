@@ -115,6 +115,20 @@ async function handle(req, res) {
     const { card } = await readBody(req);
     const def = ACTIONS[card && card.action];
     if (!def) return json(res, { ok: false, detail: '不认识的动作' }, 400);
+
+    // 目标必须来自这次体检的结果：名字对不上就不动，来源（HKCU/HKLM）也以报告为准，
+    // 免得前端把一条 HKCU 项谎报成 HKLM（或其他方向）而走错注册表根。
+    if (card.action === 'disable_startup' || card.action === 'uninstall_app') {
+      const want = card.target && card.target.name;
+      const list = card.action === 'disable_startup'
+        ? ((S.report && S.report.startup) || [])
+        : ((S.report && S.report.apps) || []);
+      const hit = list.find((x) => x.name === want);
+      if (!hit) return json(res, { ok: false, detail: '这条不在本次体检结果里，我不动。请先重新体检。' }, 400);
+      card.target = card.action === 'disable_startup'
+        ? { name: hit.name, source: hit.source }
+        : { name: hit.name };
+    }
     const t0 = Date.now();
     let chk = { ok: true };
     if (def.check) { try { chk = await def.check(card.target || {}); } catch (e) { chk = { ok: false, reason: e.message }; } }
