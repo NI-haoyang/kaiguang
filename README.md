@@ -20,7 +20,7 @@
 
 ## v0.2 桌面版怎么跑
 
-1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.3-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
+1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.4-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
 2. **把整个 zip 解压到一个空文件夹**，再双击文件夹里的 `开机第一天.exe`。
    - 不要只把 exe 复制出来，也不要在压缩软件里直接双击 exe —— Windows 只会把 exe 单独解到临时目录，DLL 和 resources 没跟过来，就会报「找不到 ffmpeg.dll」。
    - 不确定的话，先双击同目录的 `启动前检查.bat`，它会告诉你缺了什么。

@@ -140,7 +140,7 @@ async function handle(req, res) {
       const label = pick === 'wps' ? 'WPS' : pick === 'office' ? 'Office' : '';
       out = pick === 'none'
         ? { say: '好，三个办公套件都留着，这块我不动。下面按其他几项给你列。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) }
-        : { say: '好，那就留 ' + label + '。下面这几条换成了对应的版本——要卸的变成另外两个。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
+        : { say: '好，那就留 ' + label + '。下面这几条换成了对应的版本——重复的会标出来，但卸载我不代劳，只带你到设置页。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
     } else if (S.step >= 99) {
       // 已经在看动作了：这句按问答处理，不再重复列表。
       // 有 AI 就让 AI 接话（它只能引用体检数据里的名字）；没 key / 没额度 / 断网就用本地问答兜底。

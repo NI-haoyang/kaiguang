@@ -173,6 +173,5 @@ export const ACTIONS = {
 
 export const CATALOG = [
   { action: 'disable_startup', desc: '关掉一个开机自启项（HKCU 直接关；整机级 HKLM 会弹一次 UAC，可撤销）', params: { name: '自启项名字，必须原样来自 startup 列表', source: '该自启项的 source 字段' } },
-  { action: 'uninstall_app', desc: '用 winget 卸载一个软件，并记下 id 以便重装', params: { name: '软件全名，必须原样来自软件列表' } },
   { action: 'open_settings', desc: '不执行，只把 Windows 设置页打开给用户自己点（L2 的替代）', params: { uri: '如 ms-settings:windowsdefender' } },
 ];

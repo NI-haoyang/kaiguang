@@ -62,7 +62,8 @@ export function normalizeCards(raw, report) {
     const def = ACTIONS[c.action];
     if (!def) continue;
     const t = c.target || {};
-    let target = null, badge = '可撤销';
+    let action = c.action, target = null, badge = '可撤销';
+    let title = String(c.title || def.label), why = String(c.why || '');
     if (c.action === 'disable_startup') {
       const hit = startups.find(s => s.name === t.name) || startups.find(s => s.name.toLowerCase() === String(t.name || '').toLowerCase());
       if (!hit) continue;
@@ -70,20 +71,24 @@ export function normalizeCards(raw, report) {
       const needAdmin = /^HKLM/i.test(String(hit.source || ''));
       badge = '可撤销 · 约 0.3 秒';
     } else if (c.action === 'uninstall_app') {
+      // OEM 软件卸了装不回：一律降级成「带你到设置页」，不代劳
       const hit = apps.find(a => a.name === t.name) || apps.find(a => a.name.toLowerCase() === String(t.name || '').toLowerCase());
       if (!hit) continue;
-      target = { name: hit.name };
-      badge = '可撤销 · 约 15 秒';
+      action = 'open_settings';
+      target = { uri: 'ms-settings:appsfeatures' };
+      title = '去设置里卸载 ' + hit.name;
+      why = '系统不允许我自动卸载再装回；带你到设置页，你自己点一下。';
+      badge = '需要你自己点';
     } else if (c.action === 'open_settings') {
       const uri = String(t.uri || 'ms-settings:');
       if (!uri.startsWith('ms-settings:')) continue;
       target = { uri };
-      badge = '带到设置页';
+      badge = String(c.badge || '带到设置页');
     }
     out.push({
-      action: c.action, target, needAdmin: /^HKLM/i.test(String((target && target.source) || '')),
-      title: (() => { const t = String(c.title || def.label); return t.length > 28 ? t.slice(0, 27) + '…' : t; })(),
-      why: String(c.why || '').slice(0, 160),
+      action, target, needAdmin: /^HKLM/i.test(String((target && target.source) || '')),
+      title: title.length > 28 ? title.slice(0, 27) + '…' : title,
+      why: why.slice(0, 160),
       badge,
     });
     if (out.length >= 5) break;
@@ -153,31 +158,31 @@ export function buildCards(state, report, a) {
       badge: '带到设置页' });
   }
 
-  // ② 多余的安全软件
+  // ② 重复软件：合并成一张「带路」卡。OEM 软件卸了装不回，一律不代劳。
+  const drop = [];
   const av = byId.av_overlap;
-  if (av && room() > 0) {
+  if (av) {
     const keep = av.items.find(n => /火绒|huorong/i.test(n)) || av.items[0];
     for (const name of av.items.filter(n => n !== keep).slice(0, 1)) {
-      if (!apps.some(x => x.name === name)) continue;
-      cards.push({ action: 'uninstall_app', target: { name }, title: '卸载 ' + name,
-        why: '已经有 ' + keep + ' 在做实时防护，两套会互相扫同一批文件，装软件和解压时最明显。',
-        badge: '可撤销 · 约 15 秒' });
+      if (apps.some(x => x.name === name)) drop.push(name);
     }
   }
-
-  // ③ 多余的办公套件（按用户的选择留一个）——用户刚回答过，要让它有下文
   const dup = byId.dup_office;
-  if (dup && room() > 0 && (state.facts || {}).office !== 'none') {
+  if (dup && (state.facts || {}).office !== 'none') {
     const want = (state.facts && state.facts.office) || '';
     let keep = dup.items[0];
     if (want === 'wps') keep = dup.items.find(n => /WPS/i.test(n)) || keep;
     else if (want === 'office') keep = dup.items.find(n => /Office|365/i.test(n)) || keep;
-    for (const name of dup.items.filter(n => n !== keep).slice(0, Math.min(2, room()))) {
-      if (!apps.some(x => x.name === name)) continue;
-      cards.push({ action: 'uninstall_app', target: { name }, title: '卸载 ' + name,
-        why: '保留 ' + keep + ' 就够用。多一个客户端就多一份后台服务、右键菜单和「默认打开方式」的争夺。',
-        badge: '可撤销 · 约 15 秒' });
+    for (const name of dup.items.filter(n => n !== keep).slice(0, 2)) {
+      if (apps.some(x => x.name === name) && !drop.includes(name)) drop.push(name);
     }
+  }
+  if (drop.length && room() > 0) {
+    const shown = drop.slice(0, 3).join('、') + (drop.length > 3 ? ' 等 ' + drop.length + ' 个' : '');
+    cards.push({ action: 'open_settings', target: { uri: 'ms-settings:appsfeatures' },
+      title: '去设置里卸载 ' + (drop.length === 1 ? drop[0] : drop.length + ' 个重复软件'),
+      why: shown + ' 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。',
+      badge: '需要你自己点' });
   }
 
   // ④ 开机自启：装饰类 > 预加载类 > 一般第三方，人工维护一张「千万别动」的清单

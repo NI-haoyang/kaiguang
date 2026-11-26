@@ -80,13 +80,13 @@ export function answer(text, ctx) {
     if (!list.length) return { say: '按这次的体检数据，没有哪一条是「必须删」的。真要塞空间，先把不用的开机自启关掉更划算。' };
     return {
       say: '按你这台机器的数据，这几条是最值得动的：\n' + list.map((x, i) => (i + 1) + '. ' + x.name + '——' + x.why).join('\n') +
-        '\n\n卸载的撤销 = 用 winget 装回最新版；登录态和本地数据不保证回来。',
+        '\n\n卸载我不代劳：这类软件卸了装不回，我只把你带到设置页，你自己点。',
     };
   }
 
   // 2) 撤销 / 管理员这类通用问题
   if (UNDO.test(t) && !ent) {
-    return { say: '关自启的撤销是把注册表原标记写回去，基本是精确还原；卸载的撤销是用 winget 装回最新版——程序能回来，但登录态和本地数据不保证。所以「能退」不等于「当没发生」，这条我写在材料里了。' };
+    return { say: '我只动能撤回的东西：关自启的撤销是把注册表原标记写回去，基本是精确还原。卸载我不代劳——这类软件卸了装不回，我只带你到设置页。所以「能退」是真的能退，不是我嘴上说说。' };
   }
   if (ADMIN.test(t) && !ent) {
     return { say: '分两种：你这个账号自己的开机自启，不用管理员；整机级的（HKLM 那几条）要弹一次 UAC，你点「是」才动。改服务、开防火墙这类它不代劳，只把你带到设置页。' };
@@ -133,8 +133,8 @@ export function answer(text, ctx) {
     const keepAv = av && ((av.items || []).find((n) => /火绒|huorong/i.test(n)) || (av.items || [])[0]);
     if (inAv && name !== keepAv) {
       return {
-        say: head + '可以卸。你已经有「' + keepAv + '」在做实时防护，两套同时开着，装软件、解压、编译这一类操作会明显变慢。\n撤销 = 用 winget 装回最新版，登录态不保证。',
-        cards: [{ action: 'uninstall_app', target: { name }, title: '卸载 ' + name, why: '已经有 ' + keepAv + ' 在做实时防护，两套会互相扫同一批文件。', badge: '可撤销 · 约 15 秒' }],
+        say: head + '可以卸，但我不代劳——这类软件没有「静默卸载 + 一键装回」的入口，自动卸了就等于撤不回。我带你到设置页，你点一下卸载。',
+        cards: [{ action: 'open_settings', target: { uri: 'ms-settings:appsfeatures' }, title: '去设置里卸载 ' + name, why: '已经有 ' + keepAv + ' 在做实时防护，两套会互相扫同一批文件。', badge: '需要你自己点' }],
       };
     }
     if (inAv && name === keepAv) return { say: head + '这一套是我建议留下的，其余的卸掉就行。' };
@@ -142,8 +142,8 @@ export function answer(text, ctx) {
       const keep = facts.office === 'wps' ? /wps/i : facts.office === 'office' ? /office|365/i : null;
       if (keep && !keep.test(name)) {
         return {
-          say: head + '可以卸——你说留 ' + (facts.office === 'wps' ? 'WPS' : 'Office') + '，这个就重复了。\n撤销 = 用 winget 装回最新版，登录态不保证。',
-          cards: [{ action: 'uninstall_app', target: { name }, title: '卸载 ' + name, why: '你已经选了留 ' + (facts.office === 'wps' ? 'WPS' : 'Office') + '，这个重复了。', badge: '可撤销 · 约 15 秒' }],
+          say: head + '可以卸——你说留 ' + (facts.office === 'wps' ? 'WPS' : 'Office') + '，这个就重复了。但我不代劳：卸了装不回，我带你到设置页，你自己点。',
+          cards: [{ action: 'open_settings', target: { uri: 'ms-settings:appsfeatures' }, title: '去设置里卸载 ' + name, why: '你已经选了留 ' + (facts.office === 'wps' ? 'WPS' : 'Office') + '，这个重复了。', badge: '需要你自己点' }],
         };
       }
       return { say: head + '你和另外两个办公套件里，留一个就够了。想留哪个跟我说一声，我把该卸的换过来。' };
