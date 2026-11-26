@@ -38,6 +38,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=u
 
 const S = { report: null, analysis: null, step: 0, facts: {}, history: [], lastCards: [], scan: { running: false, lines: [], error: null } };
 
+const IDENTITY = '我是这个工具里的本地助手，跑在你这台机器上：读体检结果、解释每张卡是干什么的、能不能退。不是通用聊天机器人——没体检数据的事我不瞎猜。';
+
 function loadCache() {
   try {
     const r = JSON.parse(fs.readFileSync(CACHE, 'utf8'));
@@ -121,14 +123,28 @@ async function handle(req, res) {
     const { text } = await readBody(req);
     if (!S.report) return json(res, { error: '还没体检' }, 400);
     const raw = String(text || '');
+    const q = raw.trim();
     if (raw) { S.history.push({ role: 'user', text: raw }); }
+
+    // 这台拿来干嘛：先记账，后面推荐办公套件时要用
+    const usageGuess = /大学生|学生|上课|作业|论文|考研|学习|自习/.test(q) ? 'study'
+      : /打游戏|游戏|开黑/.test(q) ? 'game'
+      : /剪视频|剪辑|设计|画画/.test(q) ? 'create'
+      : /写代码|编程|代码|开发/.test(q) ? 'code' : '';
+    if (S.step === 0 && !S.facts.usage && usageGuess) S.facts.usage = usageGuess;
 
     // 办公套件留哪个：整段对话里任何时候说都算数，卡片会跟着换
     let pick = null;
+    let autoPick = false;
     if (/都留|都别动|不卸|别动/.test(raw)) pick = 'none';
     else {
       const m = raw.match(/(?:留|要留|用|选)\s*(wps|office|365)/i) || raw.match(/(wps|office|365)\s*(?:就行|就好|可以|留着)/i);
       if (m) pick = /wps/i.test(m[1]) ? 'wps' : 'office';
+    }
+    // 让助手替你拿主意：按前面说的用途推荐，别再弹同一个问题
+    if (!pick && S.step === 1 && /你推荐|你看着办|随便|都行|听你的|哪个好|你定/.test(q)) {
+      pick = S.facts.usage === 'study' ? 'wps' : 'office';
+      autoPick = true;
     }
     const changed = !!pick && pick !== (S.facts.office || '');
     if (pick) S.facts.office = pick;
@@ -136,13 +152,36 @@ async function handle(req, res) {
     const ctx = { report: S.report, analysis: S.analysis, facts: S.facts };
     let out = null;
 
+    // 两步表单只认选项；「你是谁」「迈克菲能删吗」这类自由提问不能被它吞掉。
+    // 先回答，再把当前这一步的问题重复一遍，step 不动。
+    const identity = /你是谁|你是什么|你叫什么|你能做什么|你会做什么|介绍一下你/.test(q);
+    const qlike = /[?？]|什么|怎么|为什么|为啥|哪个|哪里|谁|能不能|可不可以|要不要|吗\s*$/.test(q);
+    const choice0 = /学习为主|打游戏|剪视频|做设计|写代码|什么都干|学生|学习|上课|作业|论文|考研|办公/.test(q);
+    const choice1 = !!pick || /随便|都行|你推荐|你看着办|听你的|哪个好|你定/.test(q);
+    if (!changed && S.step < 99 && !(S.step === 0 ? choice0 : choice1) && (identity || qlike)) {
+      let say = identity ? IDENTITY : '';
+      if (!say && aiReady()) {
+        try { const r = await aiAsk({ step: S.step, facts: S.facts }, S.report, S.analysis, S.history, q); say = (r && r.say) || ''; } catch {}
+      }
+      if (!say) { const r = answer(q, ctx); say = (r && r.say) || ''; }
+      if (!say) say = '这个我没把握。说具体一点——比如某个软件的名字，或者问「哪些能删」「怎么撤销」。';
+      const cur = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis);
+      out = { say, ask: cur.ask || null };
+      S.history.push({ role: 'ai', text: out.say, cards: null, ask: out.ask || null });
+      return json(res, out);
+    }
+
     if (changed) {
       const label = pick === 'wps' ? 'WPS' : pick === 'office' ? 'Office' : '';
       const head = pick === 'none'
         ? '好，三个办公套件都留着，这块我不动。'
-        : '好，那就留 ' + label + '。';
+        : (autoPick ? '按你说的用途，我建议留 ' + label + '。' : '好，那就留 ' + label + '。');
       const fallback = { say: head + (pick === 'none' ? '下面按其他几项给你列。' : '下面这几条换成了对应的版本——重复的会标出来，但卸载我不代劳，只带你到设置页。'), cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
       out = fallback; // 动作清单由规则引擎挑：模型只负责解释，不碰执行（安全边界）
+    } else if (S.step === 0 && usageGuess) {
+      // 第一步已经答了用途（点选项或「我是大学生」这种自由说法）：直接进第二个问题
+      S.step = 1;
+      out = localStep({ step: 1, facts: S.facts }, S.report, S.analysis);
     } else if (S.step >= 99) {
       // 已经在看动作了：这句按问答处理，不再重复列表。
       // 有 AI 就让 AI 接话（它只能引用体检数据里的名字）；没 key / 没额度 / 断网就用本地问答兜底。
@@ -169,7 +208,8 @@ async function handle(req, res) {
     }
     if (out.cards && !out.keepPrev) S.lastCards = out.cards;
     S.history.push({ role: 'ai', text: out.say, cards: out.cards || null, ask: out.ask || null });
-    S.step = out.cards ? 99 : S.step + 1;
+    // step 表示「当前停在第几个问题」：问出去就停在这一步，直到用户真的选了再往前走
+    S.step = out.cards ? 99 : (out.ask ? S.step : S.step + 1);
     return json(res, out);
   }
 

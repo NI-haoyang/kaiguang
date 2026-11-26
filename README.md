@@ -6,6 +6,8 @@
 
 卡片出来以后还能接着问：改变主意就说「留 Office」，整组卡片当场换成对应的版本；想知道某个东西是什么、能不能删，直接打字问（「迈克菲联网顾问是什么」「迈克菲能删吗」「怎么撤销」「哪些能删」），它只用这次体检的数据回答，答不上来就说不知道。点卡片任意位置都能勾选，不用非得戳那个小方块。
 
+两步提问还没答完时，也能直接问「你是谁」「迈克菲能删吗」——它先把问题答了，再把当前这一步的问题问回来，不会把你的话当成选项吞掉。
+
 ![对话与动作卡片](docs/img/agent-cards.png)
 
 ![执行与日志](docs/img/agent-exec.png)
@@ -20,7 +22,7 @@
 
 ## v0.2 桌面版怎么跑
 
-1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.5-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
+1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.6-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
 2. **把整个 zip 解压到一个空文件夹**，再双击文件夹里的 `开机第一天.exe`。
    - 不要只把 exe 复制出来，也不要在压缩软件里直接双击 exe —— Windows 只会把 exe 单独解到临时目录，DLL 和 resources 没跟过来，就会报「找不到 ffmpeg.dll」。
    - 不确定的话，先双击同目录的 `启动前检查.bat`，它会告诉你缺了什么。
