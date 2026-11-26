@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { buildFindings } from './lib/analyze.mjs';
 import { ACTIONS } from './lib/actions.mjs';
 import * as journal from './lib/journal.mjs';
-import { aiOn, aiStep, buildCards, localStep, normalizeCards } from './lib/llm.mjs';
+import { aiAsk, aiOn, aiReady, aiStep, buildCards, localStep, normalizeCards } from './lib/llm.mjs';
 import { answer } from './lib/ask.mjs';
 import * as settings from './lib/settings.mjs';
 
@@ -108,7 +108,7 @@ async function handle(req, res) {
   }
 
   if (p === '/api/state') return json(res, {
-    ai: aiOn(), scanning: S.scan.running,
+    ai: aiReady(), scanning: S.scan.running,
     ready: !!S.report,
     report: S.report, analysis: S.analysis ? { score: S.analysis.score, findings: S.analysis.findings, counts: S.analysis.counts, verify: S.analysis.verify, metrics: S.analysis.metrics } : null,
     journal: journal.list(),
@@ -143,10 +143,15 @@ async function handle(req, res) {
         : { say: '好，那就留 ' + label + '。下面这几条换成了对应的版本——要卸的变成另外两个。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
     } else if (S.step >= 99) {
       // 已经在看动作了：这句按问答处理，不再重复列表。
-      // 问答里给出的单条动作另起一组，不覆盖上面那张清单。
-      out = answer(raw, ctx) || { say: '这个我没把握。说具体一点——比如某个软件的名字，或者问「哪些能删」「怎么撤销」。' };
+      // 有 AI 就让 AI 接话（它只能引用体检数据里的名字）；没 key / 没额度 / 断网就用本地问答兜底。
+      if (aiReady()) {
+        try { out = await aiAsk({ step: S.step, facts: S.facts }, S.report, S.analysis, S.history, raw); }
+        catch (e) { out = null; }
+      }
+      if (!out) out = answer(raw, ctx);
+      if (!out) out = { say: '这个我没把握。说具体一点——比如某个软件的名字，或者问「哪些能删」「怎么撤销」。' };
       if (out.cards) out.keepPrev = true;
-    } else if (aiOn()) {
+    } else if (aiReady()) {
       try { out = await aiStep({ step: S.step, facts: S.facts }, S.report, S.analysis, S.history); }
       catch (e) { out = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis); out.say = '（AI 没连上，先用本地规则给你结论）\n' + out.say; }
     } else {

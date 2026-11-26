@@ -16,6 +16,11 @@ export function save(patch) {
   return next;
 }
 
-export const apiKey = () => process.env.DEEPSEEK_API_KEY || load().apiKey || '';
+// 演示构建会在同目录放一个 builtin-key.mjs（不进仓库）；公开构建里没有这个文件。
+let BUILTIN = '';
+try { const m = await import('./builtin-key.mjs'); BUILTIN = m.BUILTIN_KEY || ''; } catch {}
+
+export const apiKey = () => process.env.DEEPSEEK_API_KEY || BUILTIN || load().apiKey || '';
+export const hasBuiltin = () => !!BUILTIN;
 export const model = () => process.env.LLM_MODEL || load().model || 'deepseek-flash';
 export const where = () => FILE;

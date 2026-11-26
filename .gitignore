@@ -9,3 +9,5 @@ node_modules/
 app/data/
 settings.json
 *.log
+# 演示构建注入的体验 key（永不提交）
+app/lib/builtin-key.mjs

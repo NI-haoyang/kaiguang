@@ -20,12 +20,25 @@
 
 ## v0.2 桌面版怎么跑
 
-1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.2-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
-2. 解压到任意目录，双击 `开机第一天.exe`。
+1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.3-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
+2. **把整个 zip 解压到一个空文件夹**，再双击文件夹里的 `开机第一天.exe`。
+   - 不要只把 exe 复制出来，也不要在压缩软件里直接双击 exe —— Windows 只会把 exe 单独解到临时目录，DLL 和 resources 没跟过来，就会报「找不到 ffmpeg.dll」。
+   - 不确定的话，先双击同目录的 `启动前检查.bat`，它会告诉你缺了什么。
 3. 等 20 秒，窗口里自动出体检报告；在中间对话框点一个选项（或直接打字），动作卡片就出来了。之后还能接着打字追问，卡片会跟着换。
 4. 勾选要做的，点「执行选中的 N 项」；想反悔，点左下角「全部撤销」。
 
 没有 API key 也能完整跑：不填 key 时用本地规则引擎出方案，体检、执行、撤销一个不少。点右上角「本地规则」可以填 DeepSeek key，让 AI 按你的用途挑动作（key 只存在本机 `%LOCALAPPDATA%\Kaiguang\settings.json`）。
+
+### 演示版的内置体验 key
+
+比赛演示用的那个 zip 里内置了一个**限额的** DeepSeek key，评委不用自己申请就能看到 AI 追问。代价说在前面：
+
+- key 会出现在下载的 exe 里，技术上一定能被扒出来 → 所以它只放比赛用的那点额度，被刷完最多损失这些额度；
+- 程序每天有调用上限（`KG_DAILY_CAP`，默认 400 次），超过就自动切回本地规则，不会一次把额度跑光；
+- 断网、key 失效、额度用完都会静默回落到本地规则，体检 / 执行 / 撤销不受影响；
+- 演示结束轮换 key，下一版重新构建。
+
+公开仓库里没有这个 key：构建脚本 `tools/build-private.ps1 -Key <key>` 只在本地把它写进 `app/lib/builtin-key.mjs`（已 gitignore），再同步到打包目录、压成 zip。
 
 **它是怎么做到「敢按下去」的**
 

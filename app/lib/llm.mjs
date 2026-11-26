@@ -4,10 +4,13 @@ import https from 'node:https';
 import { ACTIONS, CATALOG } from './actions.mjs';
 import { digest } from './analyze.mjs';
 import * as settings from './settings.mjs';
+import * as budget from './budget.mjs';
 
 const KEY = () => settings.apiKey();
 const MODEL = () => settings.model();
 export const aiOn = () => !!KEY();
+// 有 key 且今天的额度还没用完，才真的走 AI；否则本地规则接管
+export const aiReady = () => aiOn() && budget.ok();
 
 function post(body, timeoutMs = 60000) {
   return new Promise((resolve, reject) => {
@@ -206,6 +209,7 @@ export async function aiStep(state, report, analysis, history) {
   msgs.push({ role: 'user', content: '（现在是第 ' + (state.step + 1) + ' 轮，最多 3 轮。信息够了就直接给 cards。）' });
 
   const res = await post({ model: MODEL(), messages: msgs, temperature: 0.6, max_tokens: 900, response_format: { type: 'json_object' } });
+  budget.spend();
   let text = (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content) || '';
   text = text.trim().replace(/^\u0060\u0060\u0060(?:json)?/i, '').replace(/\u0060\u0060\u0060$/, '').trim();
   const j = JSON.parse(text);
@@ -213,5 +217,45 @@ export async function aiStep(state, report, analysis, history) {
   if (j.ask && j.ask.question) out.ask = { question: String(j.ask.question).slice(0, 120), chips: (j.ask.chips || []).slice(0, 5).map(String) };
   if (Array.isArray(j.cards)) out.cards = normalizeCards(j.cards, report);
   if (!out.ask && !out.cards) out.cards = [];
+  return out;
+}
+
+// 卡片出来以后的追问：允许它说人话，也允许补一张卡，但只能引用体检数据里有的名字。
+const ASK_SYSTEM = [
+  '你在一个叫「开机第一天」的 Windows 新电脑整理工具里，负责回答用户关于这台机器的追问。',
+  '',
+  '硬性要求：',
+  '1. 只输出 JSON，不要 markdown，不要解释。',
+  '2. 只能引用体检数据里真实出现过的软件名 / 自启项名。数据里没有的，直接说「这个不在这台机器的清单里，我不确定」，不要编。',
+  '3. 不要说「建议您」「亲」，像一个懂电脑的朋友，短句，2-4 句说完。',
+  '4. 不要输出任何命令。',
+  '5. 只有用户明确想删某个软件、而且这个软件确实在数据里时，才可以带 1 张卡；其余情况只说话。',
+  '',
+  '动作目录（只允许这些）：',
+  ...CATALOG.map(c => '- ' + c.action + '：' + c.desc + ' 参数：' + JSON.stringify(c.params)),
+  '',
+  '输出格式：',
+  '{"say":"回答"}',
+  '{"say":"回答","cards":[{"action":"uninstall_app","target":{"name":"软件原名"},"title":"卡片标题","why":"一句话"}]}',
+].join('\n');
+
+export async function aiAsk(state, report, analysis, history, question) {
+  if (!budget.ok()) throw new Error('quota');
+  const msgs = [{ role: 'system', content: ASK_SYSTEM }];
+  msgs.push({ role: 'user', content: '这台机器的体检数据：\n' + digest(report, analysis) });
+  for (const m of history.slice(-6)) msgs.push({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text });
+  msgs.push({ role: 'user', content: '用户刚刚问：' + question });
+  const res = await post({ model: MODEL(), messages: msgs, temperature: 0.3, max_tokens: 500, response_format: { type: 'json_object' } });
+  budget.spend();
+  let text = (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content) || '';
+  const FENCE = String.fromCharCode(96).repeat(3);
+  text = text.trim();
+  if (text.startsWith(FENCE)) text = text.slice(3);
+  if (text.startsWith('json')) text = text.slice(4);
+  if (text.endsWith(FENCE)) text = text.slice(0, -3);
+  text = text.trim();
+  const j = JSON.parse(text);
+  const out = { say: String(j.say || '').slice(0, 500) };
+  if (Array.isArray(j.cards)) out.cards = normalizeCards(j.cards, report);
   return out;
 }
