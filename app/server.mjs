@@ -155,8 +155,8 @@ async function handle(req, res) {
     // 两步表单只认选项；「你是谁」「迈克菲能删吗」这类自由提问不能被它吞掉。
     // 先回答，再把当前这一步的问题重复一遍，step 不动。
     const identity = /你是谁|你是什么|你叫什么|你能做什么|你会做什么|介绍一下你/.test(q);
-    const qlike = /[?？]|什么|怎么|为什么|为啥|哪个|哪里|谁|能不能|可不可以|要不要|吗\s*$/.test(q);
-    const choice0 = /学习为主|打游戏|剪视频|做设计|写代码|什么都干|学生|学习|上课|作业|论文|考研|办公/.test(q);
+    const qlike = /[?？]|什么|怎么|为什么|为啥|咋样|怎么样|如何|哪个|哪里|谁|能不能|可不可以|要不要|觉得|建议|改进|推荐|值不值|好不好|吗\s*$/.test(q);
+    const choice0 = /^(学习为主|打游戏|剪视频\s*\/\s*做设计|写代码|什么都干)$/.test(q);
     const choice1 = !!pick || /随便|都行|你推荐|你看着办|听你的|哪个好|你定/.test(q);
     if (!changed && S.step < 99 && !(S.step === 0 ? choice0 : choice1) && (identity || qlike)) {
       let say = identity ? IDENTITY : '';
@@ -165,6 +165,8 @@ async function handle(req, res) {
       }
       if (!say) { const r = answer(q, ctx); say = (r && r.say) || ''; }
       if (!say) say = '这个我没把握。说具体一点——比如某个软件的名字，或者问「哪些能删」「怎么撤销」。';
+      // 这句话里已经交代了用途（「我是大学生」），就别再把用途问一遍，直接进办公套件。
+      if (S.step === 0 && S.facts.usage) S.step = 1;
       const cur = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis);
       out = { say, ask: cur.ask || null };
       S.history.push({ role: 'ai', text: out.say, cards: null, ask: out.ask || null });
@@ -178,7 +180,7 @@ async function handle(req, res) {
         : (autoPick ? '按你说的用途，我建议留 ' + label + '。' : '好，那就留 ' + label + '。');
       const fallback = { say: head + (pick === 'none' ? '下面按其他几项给你列。' : '下面这几条换成了对应的版本——重复的会标出来，但卸载我不代劳，只带你到设置页。'), cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
       out = fallback; // 动作清单由规则引擎挑：模型只负责解释，不碰执行（安全边界）
-    } else if (S.step === 0 && usageGuess) {
+    } else if (S.step === 0 && usageGuess && q.length <= 12 && !qlike) {
       // 第一步已经答了用途（点选项或「我是大学生」这种自由说法）：直接进第二个问题
       S.step = 1;
       out = localStep({ step: 1, facts: S.facts }, S.report, S.analysis);
