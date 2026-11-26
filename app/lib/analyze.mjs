@@ -144,7 +144,7 @@ export function buildFindings(r) {
 
 export function digest(r, a) {
   const apps = (r.apps || []).map(x => x.name).join('、');
-  const startup = (r.startup || []).map(s => s.name + (s.source.startsWith('HKLM') ? '(系统级)' : '')).join('、');
+  const startup = (r.startup || []).map(s => s.name + (s.path ? '（' + String(s.path).slice(0, 90) + '）' : '') + (s.source.startsWith('HKLM') ? '(系统级)' : '')).join('、');
   const svc = (r.services || []).map(s => s.display || s.name).slice(0, 30).join('、');
   const fw = (r.security.firewall || []).map(f => f.name + (f.enabled ? '开' : '关')).join('/');
   return [

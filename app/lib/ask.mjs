@@ -1,5 +1,6 @@
 // 本地问答：只用这次体检的真实数据回答「这是什么 / 能不能删 / 怎么退」。
 // 不调 AI。答不上来就说不知道，不编。
+import { lookup } from './know.mjs';
 const AV = /mcafee|迈克菲|360|火绒|huorong|电脑管家|defender|卡巴|avast|诺顿/i;
 const OFFICE = /wps|office|365|word|excel|libreoffice/i;
 const BROWSER = /chrome|edge|firefox|夸克|浏览器|opera|brave/i;
@@ -109,8 +110,10 @@ export function answer(text, ctx) {
   const inOffice = !!(dupOffice && (dupOffice.items || []).includes(name));
   const inOem = !!(oem && (oem.items || []).includes(name));
 
+  const kb = lookup(name);
   if (ent.kind === 'startup') {
     const where = /^HKLM/i.test(String(ent.meta.source || '')) ? '整机级（要一次 UAC）' : '当前用户';
+    if (kb) return { say: '「' + name + '」是' + kb.what + '。' + kb.can + '。它是' + where + '的开机自启，撤销就是把原标记写回去，基本是精确还原。' };
     return {
       say: '「' + name + '」是一个开机自启项，属于' + where + '。它不参与系统功能，开机时只是提前把程序拉起来；关掉以后你手动打开照样能用。撤销是把原标记写回去，基本是精确还原。',
     };

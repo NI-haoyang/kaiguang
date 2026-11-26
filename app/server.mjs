@@ -138,9 +138,11 @@ async function handle(req, res) {
 
     if (changed) {
       const label = pick === 'wps' ? 'WPS' : pick === 'office' ? 'Office' : '';
-      out = pick === 'none'
-        ? { say: '好，三个办公套件都留着，这块我不动。下面按其他几项给你列。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) }
-        : { say: '好，那就留 ' + label + '。下面这几条换成了对应的版本——重复的会标出来，但卸载我不代劳，只带你到设置页。', cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
+      const head = pick === 'none'
+        ? '好，三个办公套件都留着，这块我不动。'
+        : '好，那就留 ' + label + '。';
+      const fallback = { say: head + (pick === 'none' ? '下面按其他几项给你列。' : '下面这几条换成了对应的版本——重复的会标出来，但卸载我不代劳，只带你到设置页。'), cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
+      out = fallback; // 动作清单由规则引擎挑：模型只负责解释，不碰执行（安全边界）
     } else if (S.step >= 99) {
       // 已经在看动作了：这句按问答处理，不再重复列表。
       // 有 AI 就让 AI 接话（它只能引用体检数据里的名字）；没 key / 没额度 / 断网就用本地问答兜底。
@@ -151,9 +153,6 @@ async function handle(req, res) {
       if (!out) out = answer(raw, ctx);
       if (!out) out = { say: '这个我没把握。说具体一点——比如某个软件的名字，或者问「哪些能删」「怎么撤销」。' };
       if (out.cards) out.keepPrev = true;
-    } else if (aiReady()) {
-      try { out = await aiStep({ step: S.step, facts: S.facts }, S.report, S.analysis, S.history); }
-      catch (e) { out = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis); out.say = '（AI 没连上，先用本地规则给你结论）\n' + out.say; }
     } else {
       out = localStep({ step: S.step, facts: S.facts }, S.report, S.analysis);
     }

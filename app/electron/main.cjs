@@ -74,7 +74,8 @@ async function boot() {
           await wait(2400);
           const afterSwitch = JSON.parse(await snap());
           // 追问一个具体软件
-          await js("(() => { const i = document.querySelector('#input'); i.value = '迈克菲能删吗'; document.querySelector('#send').click(); return true; })()");
+          const askQ = process.env.KG_ASK_Q || '迈克菲能删吗';
+          await js("(() => { const i = document.querySelector('#input'); i.value = " + JSON.stringify(askQ) + "; document.querySelector('#send').click(); return true; })()");
           await wait(2000);
           const afterAsk = JSON.parse(await snap());
           const out = { before, afterClick, afterSwitch, afterAsk };
@@ -83,7 +84,12 @@ async function boot() {
         }
       } catch (e) { console.error('drive failed', e); }
       if (process.env.KG_SHOT) {
-        try { require('node:fs').writeFileSync(process.env.KG_SHOT, (await win.webContents.capturePage()).toPNG()); } catch {}
+        try {
+          win.show(); win.focus();
+          const img = await Promise.race([win.webContents.capturePage(), new Promise((r) => setTimeout(() => r(null), 6000))]);
+          if (img) require('node:fs').writeFileSync(process.env.KG_SHOT, img.toPNG());
+          else console.log('shot timeout');
+        } catch (e) { console.log('shot failed ' + e.message); }
       }
       if (process.env.KG_SHOT_UNDO) {
         try {

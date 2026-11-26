@@ -20,31 +20,30 @@
 
 ## v0.2 桌面版怎么跑
 
-1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.4-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
+1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.5-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
 2. **把整个 zip 解压到一个空文件夹**，再双击文件夹里的 `开机第一天.exe`。
    - 不要只把 exe 复制出来，也不要在压缩软件里直接双击 exe —— Windows 只会把 exe 单独解到临时目录，DLL 和 resources 没跟过来，就会报「找不到 ffmpeg.dll」。
    - 不确定的话，先双击同目录的 `启动前检查.bat`，它会告诉你缺了什么。
 3. 等 20 秒，窗口里自动出体检报告；在中间对话框点一个选项（或直接打字），动作卡片就出来了。之后还能接着打字追问，卡片会跟着换。
 4. 勾选要做的，点「执行选中的 N 项」；想反悔，点左下角「全部撤销」。
 
-没有 API key 也能完整跑：不填 key 时用本地规则引擎出方案，体检、执行、撤销一个不少。点右上角「本地规则」可以填 DeepSeek key，让 AI 按你的用途挑动作（key 只存在本机 `%LOCALAPPDATA%\Kaiguang\settings.json`）。
+没有 API key 也能完整跑：不填 key 时用本地规则引擎出方案，体检、执行、撤销一个不少。点右上角「本地规则 / AI 已连接」，可以填自己的 DeepSeek key，让 AI 解释每一项、回答「TX Mascot 是干什么的 / 能不能删 / 怎么退」这类追问（key 只存在本机 `%LOCALAPPDATA%\Kaiguang\settings.json`，不上传）。
 
-### 演示版的内置体验 key
+### AI 是可选增强，不是运行前提
 
-比赛演示用的那个 zip 里内置了一个**限额的** DeepSeek key，评委不用自己申请就能看到 AI 追问。代价说在前面：
+- **不填 key**：规则引擎照常出方案，体检、执行、撤销一个不少；追问由本地知识库回答。
+- **填了 key**：追问交给 DeepSeek，能结合这台机器的真实数据和内置知识库解释「这是什么、关掉会怎样、能不能退」。
+- **模型不碰执行**：动作清单由规则引擎挑，模型只输出纯文本解释；断网、key 失效、额度用完都会静默回落到本地规则。
 
-- key 会出现在下载的 exe 里，技术上一定能被扒出来 → 所以它只放比赛用的那点额度，被刷完最多损失这些额度；
-- 程序每天有调用上限（`KG_DAILY_CAP`，默认 400 次），超过就自动切回本地规则，不会一次把额度跑光；
-- 断网、key 失效、额度用完都会静默回落到本地规则，体检 / 执行 / 撤销不受影响；
-- 演示结束轮换 key，下一版重新构建。
+公开仓库与 Release 里**不含任何 key**。如果评委机不方便自己填，可以在本地用 `tools/build-private.ps1 -Key <key>` 生成一个内置限额 key 的演示包（`app/lib/builtin-key.mjs` 已 gitignore），只发给现场，不公开上传。
 
-公开仓库里没有这个 key：构建脚本 `tools/build-private.ps1 -Key <key>` 只在本地把它写进 `app/lib/builtin-key.mjs`（已 gitignore），再同步到打包目录、压成 zip。
+![AI 追问：TX Mascot 是干什么的](docs/img/agent-ai.png)
 
 **它是怎么做到「敢按下去」的**
 
 | 层 | 做法 | 效果 |
 |---|---|---|
-| AI 只挑动作，不写命令 | 动作库写死（关自启 / 卸软件 / 带你到设置页），AI 只能输出 `{"action":"disable_startup","target":"TX Mascot","reason":"..."}`，参数还要过实体校验 | 判断失误最多「选错动作」，永远不会「命令注入」 |
+| AI 只解释，不碰执行 | 动作清单由规则引擎按体检结果挑；模型只读摘要、输出纯文本，不产出命令也不产出动作 | 模型说错最多是解释不准，不会误操作 |
 | 执行前先留退路 | 改之前把原值写进 journal（注册表二进制、软件包 ID、服务启动类型） | 撤销 = 把原值写回去，不需要重装 |
 | 失败即停 + 全程留痕 | 任何一步失败，后面不再执行；日志逐条可导出 | 评委可以查它做了什么、为什么、怎么退 |
 
