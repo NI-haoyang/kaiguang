@@ -6,6 +6,7 @@
 <title>小白助手 · Agent</title>
 <style>
 :root{
+  color-scheme:dark;
   --bg:#080b09; --panel:#0e1310; --panel2:#111815; --line:#1c2621; --line2:#27332c;
   --text:#e8efea; --dim:#8a9a91; --dim2:#5f6f66;
   --acc:#3ddc84; --acc2:#0f3a26; --warn:#f2c14e; --high:#ff6b6b; --blue:#5aa9f7;
@@ -263,7 +264,15 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .live-disk{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--dim)}
 .live-disk b{font-family:var(--mono);font-weight:500;color:#b9d8c6;white-space:nowrap}
 .live-model{font-size:10px;color:var(--dim2);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media (max-width:1380px){.grid{grid-template-columns:340px minmax(380px,1fr) 290px}.live-cell b{font-size:17px}}.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
+@media (max-width:1380px){.grid{grid-template-columns:340px minmax(380px,1fr) 290px}.live-cell b{font-size:17px}}
+
+/* 滚动条：跟深色面板融为一体，不再出现两条白边 */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:transparent;border-radius:99px}
+*:hover::-webkit-scrollbar-thumb{background:#24352c}
+*:hover::-webkit-scrollbar-thumb:hover{background:#36503f}
+::-webkit-scrollbar-corner{background:transparent}.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
 .demo-bar b{font-weight:700}
 .demo-bar span{opacity:.78}
 </style>
@@ -515,7 +524,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false, cleanPicked: new Set() };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false, cleanPicked: new Set(), weeklyShownAt: 0 };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -1199,10 +1208,15 @@ async function scanNow() {
       S.report = st.report; S.analysis = st.analysis; S.journal = st.journal || [];
       renderLeft(); renderLog();
       $('#thread').innerHTML = '';
+      if (st.weekly && st.weekly.unread) showWeekly(st.weekly);
       greet();
     }
   }, 400);
 }
+
+// 给托盘/主进程用：立即体检、显示本周报告
+window.kgScanNow = scanNow;
+window.kgShowWeekly = async () => { try { showWeekly(await api('/api/weekly')); } catch {} };
 
 function emptyState() {
   const t = $('#thread');
@@ -1214,6 +1228,15 @@ function emptyState() {
   b.onclick = scanNow;
   box.append(b);
   t.append(box);
+}
+
+function showWeekly(w) {
+  if (!w || !w.text || !w.at || S.weeklyShownAt === w.at) return;
+  S.weeklyShownAt = w.at;
+  const d = new Date(w.at);
+  const day = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  bubble('ai', '【本周体检 · ' + day + '】\n' + w.text);
+  api('/api/weekly/seen', { at: w.at }).catch(() => {});
 }
 
 async function greet() {
@@ -1229,6 +1252,7 @@ async function greet() {
 
 async function boot() {
   startLive();
+  if (window.kgDesktop && window.kgDesktop.onWeekly) window.kgDesktop.onWeekly(showWeekly);
   const st = await api('/api/state');
   S.ai = !!st.ai; S.model = st.model;
   $('#pillAI').textContent = st.ai ? 'AI 已连接' : '本地规则';
@@ -1237,8 +1261,8 @@ async function boot() {
     S.report = st.report; S.analysis = st.analysis; S.journal = st.journal || [];
     renderLeft(); renderLog();
     if (st.scanning) { showScan(); return scanNow(); }
-    // 有缓存：直接进对话
-    const last = S.journal.length;
+    // 有缓存：直接进对话；本周报告排在问候前面
+    if (st.weekly && st.weekly.unread) showWeekly(st.weekly);
     greet();
   } else {
     // 第一次打开：不等用户点，直接开始体检（双击到出报告 20 秒）

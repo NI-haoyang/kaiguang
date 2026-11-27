@@ -1,4 +1,5 @@
 :root{
+  color-scheme:dark;
   --bg:#080b09; --panel:#0e1310; --panel2:#111815; --line:#1c2621; --line2:#27332c;
   --text:#e8efea; --dim:#8a9a91; --dim2:#5f6f66;
   --acc:#3ddc84; --acc2:#0f3a26; --warn:#f2c14e; --high:#ff6b6b; --blue:#5aa9f7;
@@ -257,3 +258,11 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .live-disk b{font-family:var(--mono);font-weight:500;color:#b9d8c6;white-space:nowrap}
 .live-model{font-size:10px;color:var(--dim2);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:1380px){.grid{grid-template-columns:340px minmax(380px,1fr) 290px}.live-cell b{font-size:17px}}
+
+/* 滚动条：跟深色面板融为一体，不再出现两条白边 */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:transparent;border-radius:99px}
+*:hover::-webkit-scrollbar-thumb{background:#24352c}
+*:hover::-webkit-scrollbar-thumb:hover{background:#36503f}
+::-webkit-scrollbar-corner{background:transparent}
