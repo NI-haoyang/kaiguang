@@ -93,7 +93,7 @@ window.fetch = async (url, opt) => {
       { path: 'C:\\Users\\you\\Downloads\\installer.zip', name: 'installer.zip', bytes: 233 * 1024 ** 2 },
       { path: 'C:\\Users\\you\\Downloads\\video.mp4', name: 'video.mp4', bytes: 180 * 1024 ** 2 },
     ],
-    notes: ['目录大小按扫描上限截断，标「至少」的是下限。', '只读扫描，不会删除任何文件。'],
+    notes: ['目录大小按扫描上限截断，标「至少」的是下限。', '静态演示只展示扫描；安全清理只在桌面版可用。'],
   });
   if (p === '/api/journal') return j({ entries: SIM.journal.slice() });  if (p === '/api/open') return j({ ok: true, uri: body.uri });
   if (p === '/api/settings') return j({ ok: true, hasKey: false, model: 'deepseek-flash' });

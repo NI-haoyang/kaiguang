@@ -12,6 +12,7 @@ import { buildCandidatePool, aiPlan, localPlan } from './lib/plan.mjs';
 import { appById, appInstalled, catalogView } from './lib/catalog.mjs';
 import * as settings from './lib/settings.mjs';
 import { scanDisk } from './lib/disk.mjs';
+import { cleanSafe } from './lib/clean.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -139,6 +140,24 @@ async function handle(req, res) {
   if (p === '/api/disk') {
     try { return json(res, await scanDisk({ force: url.searchParams.get('refresh') === '1' })); }
     catch (e) { return json(res, { error: '磁盘扫描失败：' + e.message }, 500); }
+  }
+
+  if (p === '/api/clean' && req.method === 'POST') {
+    const { keys } = await readBody(req);
+    try {
+      const r = await cleanSafe({ keys });
+      const labels = r.items.map((x) => x.label).join('、');
+      journal.append({
+        action: 'clean_safe',
+        title: '安全清理 · ' + labels,
+        ok: r.ok,
+        detail: r.items.map((x) => x.detail).join('；'),
+        revert: null,
+      });
+      return json(res, r);
+    } catch (e) {
+      return json(res, { error: '没有清理：' + e.message }, 400);
+    }
   }
 
   if (p === '/api/scan' && req.method === 'POST') { scan(); return json(res, { ok: true }); }

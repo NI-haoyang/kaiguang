@@ -226,4 +226,14 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .disk-row .dr-size em{display:block;font-style:normal;font-size:9.5px;color:var(--dim2);text-align:right;margin-top:2px}
 .disk-note{margin:0;color:var(--dim2);font-size:10.5px;line-height:1.6}
 .disk-actions{display:flex;gap:8px;align-items:center}
+.disk-row.cleanable{cursor:pointer;transition:.15s}
+.disk-row.cleanable:hover{border-color:#2f6b4a}
+.disk-row.cleanable.on{border-color:#2f6b4a;background:#0f1c15}
+.clean-box{flex:0 0 auto;width:16px;height:16px;margin:2px 2px 0 0;accent-color:var(--acc);cursor:pointer}
+.clean-tag{display:inline-block;margin-top:4px;font-style:normal;font-size:10px;color:var(--dim2);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.disk-result{margin:0;padding:0 20px;color:#9fe8c0;font-size:12px;line-height:1.6;min-height:0}
+.disk-result:empty{display:none}
+.btn.clean{background:#2a1f12;color:#ffcf9a;border-color:#5a4124}
+.btn.clean:hover{border-color:#8a6234}
+.btn.clean:disabled{opacity:.45;cursor:not-allowed}
 @media (max-width:640px){.disk-drives{grid-template-columns:1fr}}

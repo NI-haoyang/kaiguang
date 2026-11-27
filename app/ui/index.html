@@ -39,7 +39,7 @@
     </section>
 
     <section class="block">
-      <h2>磁盘空间 <span class="hint" id="diskHint">C / D 盘只读扫描</span></h2>
+      <h2>磁盘空间 <span class="hint" id="diskHint">C / D 盘扫描</span></h2>
       <button id="btnDisk" class="btn ghost wide">扫描 C / D 盘</button>
     </section>
 
@@ -105,14 +105,16 @@
     <div class="modal-head">
       <div>
         <h2 id="diskTitle">磁盘空间</h2>
-        <p class="muted small">只读扫描：只看大小，不删任何文件。真正的清理交给 Windows 存储感知。</p>
+        <p class="muted small">扫描只读；清理只做临时文件和回收站，需要二次确认。</p>
       </div>
       <button class="modal-x" id="diskClose" aria-label="关闭">×</button>
     </div>
     <div class="disk-body" id="diskBody"><p class="muted">还没扫。</p></div>
+    <p class="disk-result" id="diskResult" role="status"></p>
     <div class="modal-foot">
-      <span class="muted small">只读扫描 · 不删文件</span>
+      <span class="muted small">扫描只读 · 清理需二次确认</span>
       <span class="disk-actions">
+        <button id="diskClean" class="btn clean sm" hidden>选择要清的项目</button>
         <button id="diskRefresh" class="btn ghost sm">重新扫描</button>
         <button id="diskSettings" class="btn primary sm">打开存储感知</button>
       </span>

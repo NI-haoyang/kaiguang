@@ -2,7 +2,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false, cleanPicked: new Set() };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -421,6 +421,7 @@ async function scanDiskUI(force = false) {
   try {
     const d = await api('/api/disk' + (force ? '?refresh=1' : ''));
     S.disk = d;
+    S.cleanPicked = new Set();
     renderDisk(d);
   } catch (e) {
     box.innerHTML = '';
@@ -470,7 +471,7 @@ function renderDisk(d) {
   const clean = (d.clean || []).filter(x => x.exists && (x.bytes > 0 || x.note));
   const sec1 = el('div', 'disk-sec');
   const h1 = el('h3');
-  h1.append(document.createTextNode('可以先清的缓存 / 临时文件'), el('span', null, d.cleanupBytes ? '约 ' + fmtSize(d.cleanupBytes) : ''));
+  h1.append(document.createTextNode('缓存 / 临时文件'), el('span', null, d.cleanupBytes ? '可清约 ' + fmtSize(d.cleanupBytes) : ''));
   sec1.append(h1);
   if (!clean.length) sec1.append(el('p', 'disk-note', '没找到可清的缓存。'));
   else {
@@ -483,6 +484,24 @@ function renderDisk(d) {
       const size = el('span', 'dr-size');
       size.append(document.createTextNode(x.bytes > 0 ? fmtSize(x.bytes) : '—'));
       if (x.truncated) size.append(el('em', null, '至少'));
+      if (x.cleanable) {
+        row.classList.add('cleanable');
+        const box = document.createElement('input');
+        box.type = 'checkbox'; box.className = 'clean-box'; box.checked = S.cleanPicked.has(x.key);
+        const setPicked = (on) => {
+          if (on) S.cleanPicked.add(x.key); else S.cleanPicked.delete(x.key);
+          box.checked = on;
+          row.classList.toggle('on', on);
+          syncCleanBtn();
+        };
+        box.onchange = () => setPicked(box.checked);
+        box.onclick = (e) => e.stopPropagation();
+        row.onclick = (e) => { if (e.target !== box) setPicked(!S.cleanPicked.has(x.key)); };
+        row.classList.toggle('on', box.checked);
+        row.prepend(box);
+      } else {
+        main.append(el('em', 'clean-tag', '只统计'));
+      }
       row.append(main, size);
       list.append(row);
     }
@@ -534,6 +553,36 @@ function renderDisk(d) {
 
   const c = (d.drives || []).find(x => x.letter === 'C' && x.exists && !x.error);
   if (c) $('#diskHint').textContent = 'C 剩 ' + Math.round(c.free / c.total * 100) + '%' + (d.cleanupBytes ? ' · 可清约 ' + fmtSize(d.cleanupBytes) : '');
+  syncCleanBtn();
+}
+
+function syncCleanBtn() {
+  const b = $('#diskClean');
+  if (!b) return;
+  const n = S.cleanPicked.size;
+  b.hidden = !S.cleanPicked.size && !document.querySelector('#diskBody .disk-row.cleanable');
+  b.disabled = n === 0;
+  b.textContent = n ? '清理选中的 ' + n + ' 项' : '选择要清的项目';
+}
+
+async function runClean() {
+  const keys = [...S.cleanPicked];
+  if (!keys.length) return;
+  const names = keys.map((k) => k === 'temp' ? '用户临时文件（7 天前）' : '回收站（当前用户）').join('\n· ');
+  if (!confirm('确认清理这 ' + keys.length + ' 项？\n\n· ' + names + '\n\n删除不可撤销，不能像其他动作一样撤回。')) return;
+  const b = $('#diskClean');
+  b.disabled = true; b.textContent = '正在清理…';
+  $('#diskResult').textContent = '';
+  try {
+    const r = await api('/api/clean', { keys });
+    const parts = r.items.map((x) => x.detail + (x.freed ? '，释放 ' + fmtSize(x.freed) : ''));
+    $('#diskResult').textContent = (r.ok ? '清理完成：' : '清理没全成：') + parts.join('；');
+    S.cleanPicked = new Set();
+    await scanDiskUI(true);
+  } catch (e) {
+    $('#diskResult').textContent = '没清理：' + e.message;
+    b.disabled = false; syncCleanBtn();
+  }
 }
 
 function closeDisk() { $('#diskModal').hidden = true; }
@@ -651,6 +700,7 @@ $('#diskSettings').onclick = async () => {
   catch (e) { b.textContent = '打开失败'; }
   setTimeout(() => { b.disabled = false; b.textContent = '打开存储感知'; }, 2500);
 };
+$('#diskClean').onclick = runClean;
 $('#diskModal').addEventListener('click', (e) => { if (e.target.id === 'diskModal') closeDisk(); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;

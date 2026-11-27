@@ -233,8 +233,17 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .disk-row .dr-size em{display:block;font-style:normal;font-size:9.5px;color:var(--dim2);text-align:right;margin-top:2px}
 .disk-note{margin:0;color:var(--dim2);font-size:10.5px;line-height:1.6}
 .disk-actions{display:flex;gap:8px;align-items:center}
-@media (max-width:640px){.disk-drives{grid-template-columns:1fr}}
-.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
+.disk-row.cleanable{cursor:pointer;transition:.15s}
+.disk-row.cleanable:hover{border-color:#2f6b4a}
+.disk-row.cleanable.on{border-color:#2f6b4a;background:#0f1c15}
+.clean-box{flex:0 0 auto;width:16px;height:16px;margin:2px 2px 0 0;accent-color:var(--acc);cursor:pointer}
+.clean-tag{display:inline-block;margin-top:4px;font-style:normal;font-size:10px;color:var(--dim2);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.disk-result{margin:0;padding:0 20px;color:#9fe8c0;font-size:12px;line-height:1.6;min-height:0}
+.disk-result:empty{display:none}
+.btn.clean{background:#2a1f12;color:#ffcf9a;border-color:#5a4124}
+.btn.clean:hover{border-color:#8a6234}
+.btn.clean:disabled{opacity:.45;cursor:not-allowed}
+@media (max-width:640px){.disk-drives{grid-template-columns:1fr}}.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
 .demo-bar b{font-weight:700}
 .demo-bar span{opacity:.78}
 </style>
@@ -272,7 +281,7 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
     </section>
 
     <section class="block">
-      <h2>磁盘空间 <span class="hint" id="diskHint">C / D 盘只读扫描</span></h2>
+      <h2>磁盘空间 <span class="hint" id="diskHint">C / D 盘扫描</span></h2>
       <button id="btnDisk" class="btn ghost wide">扫描 C / D 盘</button>
     </section>
 
@@ -338,14 +347,16 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
     <div class="modal-head">
       <div>
         <h2 id="diskTitle">磁盘空间</h2>
-        <p class="muted small">只读扫描：只看大小，不删任何文件。真正的清理交给 Windows 存储感知。</p>
+        <p class="muted small">扫描只读；清理只做临时文件和回收站，需要二次确认。</p>
       </div>
       <button class="modal-x" id="diskClose" aria-label="关闭">×</button>
     </div>
     <div class="disk-body" id="diskBody"><p class="muted">还没扫。</p></div>
+    <p class="disk-result" id="diskResult" role="status"></p>
     <div class="modal-foot">
-      <span class="muted small">只读扫描 · 不删文件</span>
+      <span class="muted small">扫描只读 · 清理需二次确认</span>
       <span class="disk-actions">
+        <button id="diskClean" class="btn clean sm" hidden>选择要清的项目</button>
         <button id="diskRefresh" class="btn ghost sm">重新扫描</button>
         <button id="diskSettings" class="btn primary sm">打开存储感知</button>
       </span>
@@ -449,7 +460,7 @@ window.fetch = async (url, opt) => {
       { path: 'C:\\Users\\you\\Downloads\\installer.zip', name: 'installer.zip', bytes: 233 * 1024 ** 2 },
       { path: 'C:\\Users\\you\\Downloads\\video.mp4', name: 'video.mp4', bytes: 180 * 1024 ** 2 },
     ],
-    notes: ['目录大小按扫描上限截断，标「至少」的是下限。', '只读扫描，不会删除任何文件。'],
+    notes: ['目录大小按扫描上限截断，标「至少」的是下限。', '静态演示只展示扫描；安全清理只在桌面版可用。'],
   });
   if (p === '/api/journal') return j({ entries: SIM.journal.slice() });  if (p === '/api/open') return j({ ok: true, uri: body.uri });
   if (p === '/api/settings') return j({ ok: true, hasKey: false, model: 'deepseek-flash' });
@@ -471,7 +482,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false, cleanPicked: new Set() };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -890,6 +901,7 @@ async function scanDiskUI(force = false) {
   try {
     const d = await api('/api/disk' + (force ? '?refresh=1' : ''));
     S.disk = d;
+    S.cleanPicked = new Set();
     renderDisk(d);
   } catch (e) {
     box.innerHTML = '';
@@ -939,7 +951,7 @@ function renderDisk(d) {
   const clean = (d.clean || []).filter(x => x.exists && (x.bytes > 0 || x.note));
   const sec1 = el('div', 'disk-sec');
   const h1 = el('h3');
-  h1.append(document.createTextNode('可以先清的缓存 / 临时文件'), el('span', null, d.cleanupBytes ? '约 ' + fmtSize(d.cleanupBytes) : ''));
+  h1.append(document.createTextNode('缓存 / 临时文件'), el('span', null, d.cleanupBytes ? '可清约 ' + fmtSize(d.cleanupBytes) : ''));
   sec1.append(h1);
   if (!clean.length) sec1.append(el('p', 'disk-note', '没找到可清的缓存。'));
   else {
@@ -952,6 +964,24 @@ function renderDisk(d) {
       const size = el('span', 'dr-size');
       size.append(document.createTextNode(x.bytes > 0 ? fmtSize(x.bytes) : '—'));
       if (x.truncated) size.append(el('em', null, '至少'));
+      if (x.cleanable) {
+        row.classList.add('cleanable');
+        const box = document.createElement('input');
+        box.type = 'checkbox'; box.className = 'clean-box'; box.checked = S.cleanPicked.has(x.key);
+        const setPicked = (on) => {
+          if (on) S.cleanPicked.add(x.key); else S.cleanPicked.delete(x.key);
+          box.checked = on;
+          row.classList.toggle('on', on);
+          syncCleanBtn();
+        };
+        box.onchange = () => setPicked(box.checked);
+        box.onclick = (e) => e.stopPropagation();
+        row.onclick = (e) => { if (e.target !== box) setPicked(!S.cleanPicked.has(x.key)); };
+        row.classList.toggle('on', box.checked);
+        row.prepend(box);
+      } else {
+        main.append(el('em', 'clean-tag', '只统计'));
+      }
       row.append(main, size);
       list.append(row);
     }
@@ -1003,6 +1033,36 @@ function renderDisk(d) {
 
   const c = (d.drives || []).find(x => x.letter === 'C' && x.exists && !x.error);
   if (c) $('#diskHint').textContent = 'C 剩 ' + Math.round(c.free / c.total * 100) + '%' + (d.cleanupBytes ? ' · 可清约 ' + fmtSize(d.cleanupBytes) : '');
+  syncCleanBtn();
+}
+
+function syncCleanBtn() {
+  const b = $('#diskClean');
+  if (!b) return;
+  const n = S.cleanPicked.size;
+  b.hidden = !S.cleanPicked.size && !document.querySelector('#diskBody .disk-row.cleanable');
+  b.disabled = n === 0;
+  b.textContent = n ? '清理选中的 ' + n + ' 项' : '选择要清的项目';
+}
+
+async function runClean() {
+  const keys = [...S.cleanPicked];
+  if (!keys.length) return;
+  const names = keys.map((k) => k === 'temp' ? '用户临时文件（7 天前）' : '回收站（当前用户）').join('\n· ');
+  if (!confirm('确认清理这 ' + keys.length + ' 项？\n\n· ' + names + '\n\n删除不可撤销，不能像其他动作一样撤回。')) return;
+  const b = $('#diskClean');
+  b.disabled = true; b.textContent = '正在清理…';
+  $('#diskResult').textContent = '';
+  try {
+    const r = await api('/api/clean', { keys });
+    const parts = r.items.map((x) => x.detail + (x.freed ? '，释放 ' + fmtSize(x.freed) : ''));
+    $('#diskResult').textContent = (r.ok ? '清理完成：' : '清理没全成：') + parts.join('；');
+    S.cleanPicked = new Set();
+    await scanDiskUI(true);
+  } catch (e) {
+    $('#diskResult').textContent = '没清理：' + e.message;
+    b.disabled = false; syncCleanBtn();
+  }
 }
 
 function closeDisk() { $('#diskModal').hidden = true; }
@@ -1120,6 +1180,7 @@ $('#diskSettings').onclick = async () => {
   catch (e) { b.textContent = '打开失败'; }
   setTimeout(() => { b.disabled = false; b.textContent = '打开存储感知'; }, 2500);
 };
+$('#diskClean').onclick = runClean;
 $('#diskModal').addEventListener('click', (e) => { if (e.target.id === 'diskModal') closeDisk(); });
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;

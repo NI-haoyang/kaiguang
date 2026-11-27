@@ -70,6 +70,15 @@ async function boot() {
           console.log('drive disk: drives=' + await js("document.querySelectorAll('#diskBody .drive').length") + ' rows=' + await js("document.querySelectorAll('#diskBody .disk-row').length"));
         }
 
+        if (process.env.KG_DRIVE === 'clean') {
+          await js("document.querySelector('#btnDisk') && document.querySelector('#btnDisk').click(); true");
+          await until("document.querySelectorAll('#diskBody .disk-row.cleanable').length > 0", 45000);
+          await wait(500);
+          await js("window.confirm = () => true; (() => { const b = document.querySelector('#diskBody .disk-row.cleanable .clean-box'); if (b) b.click(); const go = document.querySelector('#diskClean'); if (go) go.click(); return true; })()");
+          await until("document.querySelector('#diskResult') && document.querySelector('#diskResult').textContent.trim().length > 0", 60000);
+          console.log('drive clean: ' + await js("document.querySelector('#diskResult').textContent"));
+        }
+
         if (process.env.KG_DRIVE === 'apps') {
           await js("document.querySelector('#btnApps') && document.querySelector('#btnApps').click(); true");
           await wait(1800);

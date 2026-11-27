@@ -2,12 +2,24 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileP = promisify(execFile);
 
 // 只读磁盘扫描：只算大小，不删任何文件。
 // 目录大小是按“最多看多少个文件/多少毫秒”截断的，截断时用 >= 显示，不假装精确。
 
 const GB = 1024 ** 3;
 const MB = 1024 ** 2;
+
+async function currentSid() {
+  try {
+    const r = await execFileP('whoami.exe', ['/user', '/fo', 'csv', '/nh'], { windowsHide: true, timeout: 8000 });
+    const m = String(r.stdout || '').match(/S-1-5-[\d-]+/);
+    return m ? m[0] : '';
+  } catch { return ''; }
+}
 
 function driveInfo(letter) {
   const root = letter + ':\\';
@@ -131,10 +143,13 @@ export async function scanDisk({ force = false } = {}) {
     const drives = ['C', 'D'].map(driveInfo);
     const local = process.env.LOCALAPPDATA || '';
     const win = process.env.SystemRoot || 'C:\\Windows';
+    const sid = await currentSid();
+    const recC = sid ? path.join('C:\\$Recycle.Bin', sid) : 'C:\\$Recycle.Bin';
+    const recD = sid ? path.join('D:\\$Recycle.Bin', sid) : '';
     const cleanSpecs = [
       { key: 'temp', label: '用户临时文件', path: os.tmpdir() },
       { key: 'wintemp', label: 'Windows 临时文件', path: path.join(win, 'Temp') },
-      { key: 'recycle', label: '回收站（能读到的部分）', path: 'C:\\$Recycle.Bin' },
+      { key: 'recycle', label: '回收站', path: recC },
       { key: 'update', label: 'Windows 更新缓存', path: path.join(win, 'SoftwareDistribution', 'Download') },
     ];
     if (local) {
@@ -143,14 +158,35 @@ export async function scanDisk({ force = false } = {}) {
         { key: 'edge', label: 'Edge 缓存', path: path.join(local, 'Microsoft', 'Edge', 'User Data', 'Default', 'Cache') },
       );
     }
-    const cleanNotes = { wintemp: '部分文件需要管理员权限', update: '部分文件需要管理员权限', recycle: '只统计能读到的部分' };
+    const cleanNotes = {
+      temp: '只清 7 天前的文件',
+      wintemp: '部分文件需要管理员权限；不清理',
+      recycle: '当前用户的 C / D 回收站；只统计能读到的部分',
+      update: '部分文件需要管理员权限；不清理',
+      chrome: '只统计；清理请用浏览器自身设置',
+      edge: '只统计；清理请用浏览器自身设置',
+    };
+    const cleanable = { temp: true, recycle: true };
     const clean = (await Promise.all(cleanSpecs.map((s) => sizeOf(s.label, s.key, s.path, { maxEntries: 6000, maxMs: 2200, workers: 4 }))))
-      .map((x) => ({ ...x, note: cleanNotes[x.key] || '' }));
+      .map((x) => ({ ...x, cleanable: !!cleanable[x.key], note: cleanNotes[x.key] || '' }));
+
+    // 回收站把 D 盘也算进来；清理时会一起清空。
+    const recycle = clean.find((x) => x.key === 'recycle');
+    if (recycle && recD) {
+      const d = await sizeOf('回收站 D', 'recycleD', recD, { maxEntries: 6000, maxMs: 1800, workers: 4 });
+      if (d.exists) {
+        recycle.bytes = (recycle.bytes || 0) + d.bytes;
+        recycle.files = (recycle.files || 0) + d.files;
+        recycle.truncated = recycle.truncated || d.truncated;
+        recycle.path = 'C:\\$Recycle.Bin; D:\\$Recycle.Bin';
+      }
+    }
     const dirs = (await Promise.all(['C', 'D'].map(topDirs))).flat().sort((a, b) => b.bytes - a.bytes).slice(0, 10);
     const home = os.homedir();
     const userRoots = ['Downloads', 'Desktop', 'Documents', 'Videos', 'Pictures'].map((n) => ({ path: path.join(home, n) }));
     const files = await largeFiles(userRoots);
-    const cleanupBytes = clean.reduce((n, x) => n + (x.bytes || 0), 0);
+    // 这个数字只算「我们能清」的项；浏览器缓存等只统计，不计入。
+    const cleanupBytes = clean.filter((x) => x.cleanable).reduce((n, x) => n + (x.bytes || 0), 0);
     const data = {
       at: Date.now(),
       tookMs: Date.now() - t0,
@@ -162,7 +198,7 @@ export async function scanDisk({ force = false } = {}) {
       notes: [
         '目录大小按扫描上限截断，标「至少」的是下限，不是精确值。',
         '大文件只扫当前用户的下载 / 桌面 / 文档 / 视频 / 图片；D 盘看目录占用。',
-        '只读扫描，不会删除任何文件。',
+        '扫描只读；清理只做用户临时文件和回收站，需二次确认。',
       ],
     };
     cache = { at: Date.now(), data };

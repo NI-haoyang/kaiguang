@@ -48,6 +48,7 @@ const REMOVE = /能删|可以删|删了|要不要删|卸载|能不能删|删掉/
 const UNDO = /撤销|退回|恢复原样|后悔|怎么退/;
 const ADMIN = /管理员|uac|权限/;
 const LIST = /哪个能删|哪些能删|能删什么|有什么能删|推荐删|清理什么|该删什么/;
+const DISK = /清.*(c\s*盘|d\s*盘|磁盘|空间|盘)|垃圾|临时文件|回收站|清一下/;
 const INSTALL = /装|安装|下载/;
 
 function removableNotes(report, analysis, facts) {
@@ -75,6 +76,13 @@ export function answer(text, ctx) {
 
   const byId = Object.fromEntries((analysis.findings || []).map((f) => [f.id, f]));
   const ent = findEntity(t, report);
+
+  // 0) 磁盘清理：只指到左侧磁盘空间，不承诺自动删
+  if (DISK.test(t) && !REMOVE.test(t)) {
+    return {
+      say: '磁盘清理在左边「磁盘空间 → 扫描 C / D 盘」。扫完可以勾「用户临时文件」或「回收站」，点清理会再确认一次。\n\n只清 7 天前的临时文件和当前用户回收站；删了不可撤销，用户文档、下载、桌面都不碰。其他缓存看完点「打开存储感知」交给 Windows。',
+    };
+  }
 
   // 1) 泛问：哪些能删
   if (LIST.test(t)) {
