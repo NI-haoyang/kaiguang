@@ -1,6 +1,6 @@
 {
   "name": "kaiguang",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "description": "新电脑开荒：先体检，再决定装什么。",
   "main": "app/electron/main.cjs",
   "directories": {
