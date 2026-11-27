@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFindings } from '../app/lib/analyze.mjs';
-import { localStep } from '../app/lib/llm.mjs';
+import { buildCandidatePool, localPlan } from '../app/lib/plan.mjs';
 import { answer } from '../app/lib/ask.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -17,16 +17,18 @@ const slim = {
   score: analysis.score, findings: analysis.findings, counts: analysis.counts,
   verify: analysis.verify, metrics: analysis.metrics,
 };
+const pool = buildCandidatePool(report, analysis);
+const base = { report, analysis, pool, history: [], hasPlan: false };
 const data = {
   report: { counts: report.counts, machine: report.machine, system: report.system },
   analysis: slim,
-  greet: localStep({ step: 0, facts: {} }, report, analysis),
-  ask2: localStep({ step: 1, facts: {} }, report, analysis),
-  variants: {
-    wps: localStep({ step: 2, facts: { office: 'wps' } }, report, analysis),
-    office: localStep({ step: 2, facts: { office: 'office' } }, report, analysis),
-    keep: localStep({ step: 2, facts: {} }, report, analysis),
-  },
+  greet: localPlan({ ...base, text: '' }),
+  game: localPlan({ ...base, text: '打游戏' }),
+  create: localPlan({ ...base, text: '剪视频' }),
+  code: localPlan({ ...base, text: '写代码' }),
+  study: localPlan({ ...base, text: '学习' }),
+  confirm: localPlan({ ...base, text: '就按这个来', hasPlan: true }),
+  stop: localPlan({ ...base, text: '不用了', hasPlan: true }),
   // 追问：跟桌面版同一套本地问答，构建时算好塞进页面
   answers: [
     { re: '哪些能删|能删什么|推荐删', say: answer('哪些能删', { report, analysis, facts: { office: 'wps' } }).say },

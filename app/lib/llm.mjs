@@ -167,11 +167,34 @@ export function localStep(state, report, analysis) {
   return { say: '按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。', cards: buildCards(state, report, a) };
 }
 
-const KEEP_RE = /deepseek|clash|v2ray|vpn|proxy|代理|input|输入法|ime\b|driver|驱动|nvidia|radeon|intel|audio|声卡|realtek|defender|securityhealth|sysdiag|huorong|火绒|everything/i;
+const KEEP_RE = /deepseek|clash|v2ray|vpn|proxy|代理|input|输入法|ime\b|driver|驱动|nvidia|radeon|intel|audio|声卡|realtek|defender|securityhealth|sysdiag|huorong|火绒|everything|feishu|飞书|mchose|邮箱大师|snowshot|微信|wechat|qq\b|steam|epic|battle\.net/i;
 const DECO = /mascot|aura|armoury|armory|rog\b|asus\b|glidex|myasus|桌宠|olympus|framework/i;
 const PRELOAD = /autolaunch|preload|updater|update|assistant|助手/i;
 
 function cardIsDecor(s) { return DECO.test(s.name); }
+
+// 给 AI 的候选池：和卡片用同一套「千万别动」名单，只是不提前截断到 5 条。
+export function startupCandidates(report) {
+  const cand = (report.startup || []).filter((s2) => !KEEP_RE.test(s2.name));
+  const t1 = cand.filter((s2) => DECO.test(s2.name));
+  const t2 = cand.filter((s2) => !DECO.test(s2.name) && PRELOAD.test(s2.name));
+  const t3 = cand.filter((s2) => !DECO.test(s2.name) && !PRELOAD.test(s2.name));
+  return [...t1, ...t2, ...t3];
+}
+
+export function startupCard(s2) {
+  const why = DECO.test(s2.name)
+    ? '厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。'
+    : PRELOAD.test(s2.name)
+      ? '开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。'
+      : '这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。';
+  const needAdmin = /^HKLM/i.test(String(s2.source || ''));
+  return {
+    action: 'disable_startup', target: { name: s2.name, source: s2.source }, needAdmin,
+    title: '关掉 ' + (s2.name.length > 22 ? s2.name.slice(0, 21) + '…' : s2.name) + ' 的开机自启',
+    why, badge: '可撤销 · 约 0.3 秒',
+  };
+}
 
 export function buildCards(state, report, a) {
   const cards = [];
@@ -218,26 +241,15 @@ export function buildCards(state, report, a) {
   }
 
   // ④ 开机自启：装饰类 > 预加载类 > 一般第三方，人工维护一张「千万别动」的清单
-  const KEEP = KEEP_RE;
-  const cand = startup.filter(s2 => !KEEP.test(s2.name));
-  const t1 = cand.filter(s2 => DECO.test(s2.name));
-  const t2 = cand.filter(s2 => !DECO.test(s2.name) && PRELOAD.test(s2.name));
-  const t3 = cand.filter(s2 => !DECO.test(s2.name) && !PRELOAD.test(s2.name));
-  const order = [...t1, ...t2, ...t3].slice(0, Math.max(0, room()));
-  for (const s2 of order) {
-    const why = DECO.test(s2.name)
-      ? '厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。'
-      : PRELOAD.test(s2.name)
-        ? '开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。'
-        : '这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。';
-    const needAdmin = /^HKLM/i.test(String(s2.source || ''));
-    cards.push({ action: 'disable_startup', target: { name: s2.name, source: s2.source }, needAdmin,
-      title: '关掉 ' + (s2.name.length > 22 ? s2.name.slice(0, 21) + '…' : s2.name) + ' 的开机自启',
-      why, badge: '可撤销 · 约 0.3 秒' });
+  for (const s2 of startupCandidates(report).slice(0, Math.max(0, room()))) {
+    cards.push(startupCard(s2));
   }
 
   return cards.slice(0, 5);
 }
+
+export const aiModel = () => MODEL();
+export { post as aiPost };
 
 export async function aiStep(state, report, analysis, history) {
   const msgs = [{ role: 'system', content: SYSTEM }];

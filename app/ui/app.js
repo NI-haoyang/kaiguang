@@ -136,7 +136,7 @@ function scroll() { const t = $('#thread'); t.scrollTop = t.scrollHeight; }
 
 function bubble(role, text) {
   const m = el('div', 'msg ' + (role === 'user' ? 'user' : ''));
-  m.append(el('div', 'av', role === 'user' ? '你' : '开'));
+  m.append(el('div', 'av', role === 'user' ? '你' : '小'));
   const b = el('div', 'body', text);
   m.append(b);
   $('#thread').append(m);
@@ -159,11 +159,18 @@ function send(text) {
   $('#input').value = '';
   bubble('user', text);
   S.busy = true;
+  const pending = bubble('ai', '正在想…');
+  pending.classList.add('pending');
   api('/api/chat', { text }).then(out => {
+    pending.remove();
     const m = bubble('ai', out.say);
-    if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || ['好', '不用了'], send));
+    if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || [], send));
+    if (out.clear) {
+      document.querySelectorAll('#thread .cards').forEach(n => n.remove());
+      S.cards = []; S.picked = new Set();
+    }
     if (out.cards) renderCards(out.cards, !out.keepPrev);
-  }).catch(e => bubble('ai', '出错了：' + e.message)).finally(() => { S.busy = false; });
+  }).catch(e => { pending.remove(); bubble('ai', '出错了：' + e.message); }).finally(() => { S.busy = false; });
 }
 
 /* ---------------- 卡片 ---------------- */
@@ -439,9 +446,13 @@ function emptyState() {
 }
 
 async function greet() {
+  const pending = bubble('ai', '正在看这台机器…');
+  pending.classList.add('pending');
   const out = await api('/api/chat', { text: '' });
+  pending.remove();
   const m = bubble('ai', out.say);
   if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || [], send));
+  if (out.clear) document.querySelectorAll('#thread .cards').forEach(n => n.remove());
   if (out.cards) renderCards(out.cards);
 }
 

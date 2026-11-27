@@ -180,6 +180,34 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.65 "Segoe UI","
 body.desktop .top{-webkit-app-region:drag;padding-right:150px}
 body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .hint{font-size:12px;color:var(--dim2)}
+
+/* 装机清单 */
+.apps-block .wide{width:100%;text-align:left;background:#0f1a15;border-color:#2a3c33}
+.apps-block .wide:hover{border-color:var(--acc);color:var(--acc)}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;padding:24px}
+.modal[hidden]{display:none}
+.modal-card{width:min(720px,100%);max-height:84vh;display:flex;flex-direction:column;background:#0e1310;border:1px solid var(--line2);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.5);overflow:hidden}
+.modal-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+.modal-head h2{margin:0 0 4px;font-size:16px}
+.modal-head p{margin:0;max-width:520px}
+.modal-x{flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--dim);font-size:20px;line-height:1;cursor:pointer}
+.modal-x:hover{color:var(--text);border-color:#3a4a42}
+.apps-list{overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.app-row{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:11px 12px;cursor:pointer;transition:.15s}
+.app-row:hover{border-color:#2f6b4a}
+.app-row.on{opacity:.55;cursor:default}
+.app-row.bad{border-color:#4a2222;background:#150e0e}
+.app-row input{flex:0 0 auto;width:16px;height:16px;margin-top:3px;accent-color:var(--acc);cursor:pointer}
+.app-row.on input{cursor:default}
+.app-main{min-width:0;flex:1}
+.app-name{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+.app-tag{font-size:10.5px;font-weight:400;color:#8fb8a1;border:1px solid #24322b;border-radius:5px;padding:1px 6px;background:#0d1712}
+.app-main p{margin:4px 0 0;font-size:12px;color:var(--dim);line-height:1.55}
+.app-state{flex:0 0 auto;font-size:11.5px;color:var(--dim2);max-width:170px;text-align:right;line-height:1.4}
+.app-row.on .app-state{color:var(--acc)}
+.app-row.bad .app-state{color:#ff9d9d}
+.modal-foot{display:flex;justify-content:space-between;gap:14px;align-items:center;padding:13px 20px;border-top:1px solid var(--line);background:#0b1210}
+.modal-foot .btn{white-space:nowrap}
 .demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
 .demo-bar b{font-weight:700}
 .demo-bar span{opacity:.78}
@@ -211,6 +239,11 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
     </section>
 
     <section class="metrics" id="metrics"></section>
+
+    <section class="block apps-block">
+      <h2>装软件 <span class="hint" id="appsHint">新电脑还缺什么</span></h2>
+      <button id="btnApps" class="btn ghost wide">打开装机清单</button>
+    </section>
 
     <section class="block">
       <h2>验机</h2>
@@ -252,9 +285,26 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
   </aside>
 </main>
 
+<div class="modal" id="appsModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="appsTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="appsTitle">装基础软件</h2>
+        <p class="muted small">只装你勾的；从 winget 官方源装，装完可以从日志里撤销（卸载刚装的）。</p>
+      </div>
+      <button class="modal-x" id="appsClose" aria-label="关闭">×</button>
+    </div>
+    <div class="apps-list" id="appsList"></div>
+    <div class="modal-foot">
+      <span id="appsStatus" class="muted small"></span>
+      <button id="appsInstall" class="btn primary" disabled>安装选中的 0 个</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* 静态演示用的假后端：动作全是模拟的，不碰用户的电脑。由 tools/build-agent-demo.mjs 内联进页面。 */
-const DATA = {"report":{"counts":{"apps":76,"startup":10,"services":23},"machine":"FRANKNI","system":{"osName":"Microsoft Windows 11 家庭版 中文版","osBuild":"26200","arch":"64 位","installedAt":null,"lastBoot":null,"manufacturer":"ASUS","model":"TX Gaming FX608LMG","ramGB":15.4,"cpu":"Intel(R) Core(TM) Ultra 7 251HX","cpuCores":18,"cpuThreads":18}},"analysis":{"score":70,"findings":[{"level":"high","tone":"info","id":"firewall_off","title":"防火墙关着：Private、Public 网络","detail":"在宿舍、咖啡店这类公共 Wi-Fi 下，防火墙是挡住局域网扫描的第一道门。关掉它通常是装某个软件时被引导关的，之后就忘了开回来。","fix":"设置 → 隐私和安全性 → Windows 安全中心 → 防火墙和网络保护，把「专用」和「公用」都打开。","action":"open_settings","args":{"uri":"ms-settings:windowsdefender"},"badge":"带到设置页","cta":"打开设置页"},{"level":"warn","tone":"warn","id":"av_overlap","title":"同时装了 2 套安全/管家软件","detail":"两套以上的实时防护会互相把对方扫一遍，文件操作明显变慢，还容易出现「一个拦一个」的弹窗打架。Windows 只需要一套实时防护。","fix":"只留一套（火绒这类轻量的就够），其余卸载干净，重启后再看安全中心有没有恢复正常。","items":["火绒安全软件","迈克菲联网顾问"]},{"level":"ok","tone":"ok","id":"startup_ok","title":"开机自启 10 个，不多","detail":"这个数量在正常范围。"},{"level":"info","tone":"info","id":"svc_many","title":"23 个第三方服务开机自启","detail":"这些不是病毒，是厂商为了让「功能随时可用」装的常驻服务。代价是内存和后台唤醒。"},{"level":"ok","tone":"ok","id":"disk_ok","title":"C: 空间健康（剩 46%，191.6 GB）","detail":"系统盘保持 20% 以上余量，更新和虚拟内存都不会卡。"},{"level":"warn","tone":"warn","id":"dup_office","title":"装了 3 个办公套件","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["微软OfficePLUS","Microsoft 365 - zh-cn","WPS Office (12.1.0.29690)"],"catId":"office"},{"level":"info","tone":"info","id":"dup_browser","title":"装了 3 个浏览器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["Google Chrome","Microsoft Edge","夸克"],"catId":"browser"},{"level":"info","tone":"info","id":"dup_video","title":"装了 3 个视频客户端","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["哔哩哔哩","腾讯视频","抖音"],"catId":"video"},{"level":"info","tone":"info","id":"dup_accel","title":"装了 3 个网络/游戏加速器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["FlClash 版本 0.9.1+2026101702","UU加速器","迅游加速器"],"catId":"accel"},{"level":"info","tone":"info","id":"oem_bloat","title":"品牌预装组件 12 个","detail":"整机厂为了灯效、风扇曲线、投屏、桌宠装了一整套。功能是真的，但没必要全部开机就运行。","items":["Armoury Crate Service","ASUS Hotplug Controller","ROG Live Service","ASUS MS Control","GlideX Service Installer","AURA lighting effect add-on x64","ASUS Monitor Control","AURA Service","AURA lighting effect add-on","ROG FALCHION ACE HFX","ASUS Framework Service","ASUS Smart Display Control"]},{"level":"info","tone":"info","id":"secureboot_off","title":"安全启动是关的","detail":"关掉通常是为了装双系统或某些驱动。日常使用开着更安全，但它不影响开荒，先记一笔。"}],"counts":{"high":1,"warn":2,"info":6},"verify":{"tone":"high","title":"这台不是刚拆封的机器","detail":"系统装好 80 天，电池健康 98%。如果你是按新机买的，值得确认一下是不是样机或退换机。"},"metrics":{"freePct":46,"battHealth":98,"days":80}},"greet":{"say":"体检完了。这台是 ASUS TX Gaming FX608LMG，Windows 11 家庭版 中文版，装了 76 个软件——其中华硕自己就占了 12 个。C: 盘还剩 46%，这块不用管。","ask":{"question":"先问一句：这台主要拿来干嘛？","chips":["学习为主","打游戏","剪视频 / 做设计","写代码","什么都干"]}},"ask2":{"say":"明白。第二个问题跟你手上的软件有关：你现在有三个办公套件——微软OfficePLUS、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690)。三个都装着，每次打开文档它们都在抢「默认打开方式」。","ask":{"question":"留哪个？","chips":["留 WPS","留 Office","都留着，别动"]}},"variants":{"wps":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、微软OfficePLUS、Microsoft 365 - zh-cn 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"vmware-tray.exe","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 vmware-tray.exe 的开机自启","why":"这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。","badge":"可撤销 · 约 0.3 秒"}]},"office":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690) 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"vmware-tray.exe","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 vmware-tray.exe 的开机自启","why":"这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。","badge":"可撤销 · 约 0.3 秒"}]},"keep":{"say":"按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690) 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"vmware-tray.exe","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 vmware-tray.exe 的开机自启","why":"这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。","badge":"可撤销 · 约 0.3 秒"}]}},"answers":[{"re":"哪些能删|能删什么|推荐删","say":"按你这台机器的数据，这几条是最值得动的：\n1. 迈克菲联网顾问——已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件。\n2. 微软OfficePLUS——你说留 WPS，这个就重复了。\n3. Microsoft 365 - zh-cn——你说留 WPS，这个就重复了。\n\n卸载我不代劳：这类软件卸了装不回，我只把你带到设置页，你自己点。"},{"re":"怎么撤销|能退回|后悔","say":"我只动能撤回的东西：关自启的撤销是把注册表原标记写回去，基本是精确还原。卸载我不代劳——这类软件卸了装不回，我只带你到设置页。所以「能退」是真的能退，不是我嘴上说说。"},{"re":"迈克菲|mcafee","say":"「迈克菲联网顾问」是安全 / 管家软件（发布者 McAfee, LLC）。可以卸，但我不代劳——这类软件没有「静默卸载 + 一键装回」的入口，自动卸了就等于撤不回。我带你到设置页，你点一下卸载。"},{"re":"火绒","say":"「火绒安全软件」是安全 / 管家软件（发布者 北京火绒网络科技有限公司，2026-10-27 装上的）。这一套是我建议留下的，其余的卸掉就行。"}]};
+const DATA = {"report":{"counts":{"apps":76,"startup":10,"services":23},"machine":"FRANKNI","system":{"osName":"Microsoft Windows 11 家庭版 中文版","osBuild":"26200","arch":"64 位","installedAt":null,"lastBoot":null,"manufacturer":"ASUS","model":"TX Gaming FX608LMG","ramGB":15.4,"cpu":"Intel(R) Core(TM) Ultra 7 251HX","cpuCores":18,"cpuThreads":18}},"analysis":{"score":70,"findings":[{"level":"high","tone":"info","id":"firewall_off","title":"防火墙关着：Private、Public 网络","detail":"在宿舍、咖啡店这类公共 Wi-Fi 下，防火墙是挡住局域网扫描的第一道门。关掉它通常是装某个软件时被引导关的，之后就忘了开回来。","fix":"设置 → 隐私和安全性 → Windows 安全中心 → 防火墙和网络保护，把「专用」和「公用」都打开。","action":"open_settings","args":{"uri":"ms-settings:windowsdefender"},"badge":"带到设置页","cta":"打开设置页"},{"level":"warn","tone":"warn","id":"av_overlap","title":"同时装了 2 套安全/管家软件","detail":"两套以上的实时防护会互相把对方扫一遍，文件操作明显变慢，还容易出现「一个拦一个」的弹窗打架。Windows 只需要一套实时防护。","fix":"只留一套（火绒这类轻量的就够），其余卸载干净，重启后再看安全中心有没有恢复正常。","items":["火绒安全软件","迈克菲联网顾问"]},{"level":"ok","tone":"ok","id":"startup_ok","title":"开机自启 10 个，不多","detail":"这个数量在正常范围。"},{"level":"info","tone":"info","id":"svc_many","title":"23 个第三方服务开机自启","detail":"这些不是病毒，是厂商为了让「功能随时可用」装的常驻服务。代价是内存和后台唤醒。"},{"level":"ok","tone":"ok","id":"disk_ok","title":"C: 空间健康（剩 46%，191.6 GB）","detail":"系统盘保持 20% 以上余量，更新和虚拟内存都不会卡。"},{"level":"warn","tone":"warn","id":"dup_office","title":"装了 3 个办公套件","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["微软OfficePLUS","Microsoft 365 - zh-cn","WPS Office (12.1.0.29690)"],"catId":"office"},{"level":"info","tone":"info","id":"dup_browser","title":"装了 3 个浏览器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["Google Chrome","Microsoft Edge","夸克"],"catId":"browser"},{"level":"info","tone":"info","id":"dup_video","title":"装了 3 个视频客户端","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["哔哩哔哩","腾讯视频","抖音"],"catId":"video"},{"level":"info","tone":"info","id":"dup_accel","title":"装了 3 个网络/游戏加速器","detail":"同一件事有好几个客户端在抢「默认打开方式」，而且每个都注册了后台服务、开机自启和右键菜单。多半不是有意的，是装别的软件时被捎带上的。","fix":"每类挑一个主力留下，其余卸载；舍不得删的，至少把开机自启关掉——效果差不了多少。","items":["FlClash 版本 0.9.1+2026101702","UU加速器","迅游加速器"],"catId":"accel"},{"level":"info","tone":"info","id":"oem_bloat","title":"品牌预装组件 12 个","detail":"整机厂为了灯效、风扇曲线、投屏、桌宠装了一整套。功能是真的，但没必要全部开机就运行。","items":["Armoury Crate Service","ASUS Hotplug Controller","ROG Live Service","ASUS MS Control","GlideX Service Installer","AURA lighting effect add-on x64","ASUS Monitor Control","AURA Service","AURA lighting effect add-on","ROG FALCHION ACE HFX","ASUS Framework Service","ASUS Smart Display Control"]},{"level":"info","tone":"info","id":"secureboot_off","title":"安全启动是关的","detail":"关掉通常是为了装双系统或某些驱动。日常使用开着更安全，但它不影响开荒，先记一笔。"}],"counts":{"high":1,"warn":2,"info":6},"verify":{"tone":"high","title":"这台不是刚拆封的机器","detail":"系统装好 80 天，电池健康 98%。如果你是按新机买的，值得确认一下是不是样机或退换机。"},"metrics":{"freePct":46,"battHealth":98,"days":80}},"greet":{"say":"这台是 ASUS TX Gaming FX608LMG，Microsoft Windows 11 家庭版 中文版，装了 76 个软件，C: 盘还剩 46%。\n我先按通用情况列了几条：防火墙、重复软件、装饰类自启。\n你这台主要拿来干嘛？打游戏、剪视频、写代码、学习，说一声我按用途换一套。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690) 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"vmware-tray.exe","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 vmware-tray.exe 的开机自启","why":"这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。","badge":"可撤销 · 约 0.3 秒"}]},"game":{"say":"打游戏这台，方案按优先级来：\n1. 先关装饰类自启（TX Mascot、MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584、vmware-tray.exe）——不进系统功能，开机少几个后台；\n2. 防火墙现在是关的，打开（宿舍 Wi-Fi 第一道门）；\n3. 重复的安全软件只带你到设置页，卸不卸你定。\n显卡驱动和 Steam / 游戏平台我不动。","cards":[{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"vmware-tray.exe","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 vmware-tray.exe 的开机自启","why":"这是它自己要求开机启动的，不是系统要的。不常用的话关掉，用的时候手动打开就行。","badge":"可撤销 · 约 0.3 秒"},{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690) 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"}]},"create":{"say":"剪视频 / 做设计主要吃显卡和内存：\n1. 先关装饰类和预加载自启（TX Mascot、MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584），预览和导出会稳一点；\n2. 防火墙现在是关的，打开；\n3. C: 盘留出 20% 以上余量，素材别堆在系统盘。\n显卡驱动和剪辑软件本身我不动。","cards":[{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690) 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"}]},"code":{"say":"写代码主要吃内存和多开：\n1. 先关装饰类自启（TX Mascot、MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584），开 IDE 和浏览器会轻一点；\n2. 防火墙现在是关的，打开；\n3. VS Code 和 Git 没装的话，去左边「装软件」里补，装完也能撤。","cards":[{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"},{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"}]},"study":{"say":"学习为主，方案就三块：\n1. 重复的软件只带到设置页，卸不卸你定；\n2. 防火墙现在是关的，打开；\n3. 关掉装饰类自启（TX Mascot、MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584），开机少几个后台。","cards":[{"action":"open_settings","target":{"uri":"ms-settings:appsfeatures"},"title":"去设置里卸载 3 个重复软件","why":"迈克菲联网顾问、Microsoft 365 - zh-cn、WPS Office (12.1.0.29690) 是重复的：两套安全软件会互相扫同一批文件，多个办公套件会抢「默认打开方式」。系统不允许我自动卸载再装回，所以我只带你到设置页，你自己点。","badge":"需要你自己点"},{"action":"open_settings","target":{"uri":"ms-settings:windowsdefender"},"title":"打开防火墙（专用 + 公用）","why":"两个网络配置的防火墙都是关的。在宿舍、咖啡店的 Wi-Fi 下，这是挡局域网扫描的第一道门。","badge":"带到设置页"},{"action":"disable_startup","target":{"name":"TX Mascot","source":"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":true,"title":"关掉 TX Mascot 的开机自启","why":"厂商的装饰类组件（灯效、桌宠、风扇面板这类），不参与系统功能，开机时纯占位。","badge":"可撤销 · 约 0.3 秒"},{"action":"disable_startup","target":{"name":"MicrosoftEdgeAutoLaunch_DE7A34E55459B74DE274218D1C103584","source":"HKU\\S-1-5-21-2037898678-2208687073-1187941192-1001\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"},"needAdmin":false,"title":"关掉 MicrosoftEdgeAutoLaun… 的开机自启","why":"开机预加载。关掉不影响你手动打开，只是省下开机那几秒和一点内存。","badge":"可撤销 · 约 0.3 秒"}]},"confirm":{"say":"好，方案不变。上面勾好的直接点「执行选中的 N 项」；每一步都会记原值，随时能撤销。","keepPrev":true},"stop":{"say":"行，那这次不动。上面的卡片我撤掉了；想改哪条直接说。","clear":true},"answers":[{"re":"哪些能删|能删什么|推荐删","say":"按你这台机器的数据，这几条是最值得动的：\n1. 迈克菲联网顾问——已经有 火绒安全软件 在做实时防护，两套会互相扫同一批文件。\n2. 微软OfficePLUS——你说留 WPS，这个就重复了。\n3. Microsoft 365 - zh-cn——你说留 WPS，这个就重复了。\n\n卸载我不代劳：这类软件卸了装不回，我只把你带到设置页，你自己点。"},{"re":"怎么撤销|能退回|后悔","say":"我只动能撤回的东西：关自启的撤销是把注册表原标记写回去，基本是精确还原。卸载我不代劳——这类软件卸了装不回，我只带你到设置页。所以「能退」是真的能退，不是我嘴上说说。"},{"re":"迈克菲|mcafee","say":"「迈克菲联网顾问」是安全 / 管家软件（发布者 McAfee, LLC）。可以卸，但我不代劳——这类软件没有「静默卸载 + 一键装回」的入口，自动卸了就等于撤不回。我带你到设置页，你点一下卸载。"},{"re":"火绒","say":"「火绒安全软件」是安全 / 管家软件（发布者 北京火绒网络科技有限公司，2026-10-27 装上的）。这一套是我建议留下的，其余的卸掉就行。"}]};
 const STEP_LABELS = ['读系统与硬件','看磁盘空间','数一遍装了多少软件','检查开机自启','看后台服务','查防火墙和防护状态','验机：电池、硬盘、安装天数','整理成报告'];
 const SIM = { journal: [], step: 0, lines: [], running: false, reported: false, started: 0 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -308,18 +358,19 @@ window.fetch = async (url, opt) => {
     return j({ running: SIM.running, lines: SIM.lines, error: null, ready: SIM.reported });
   }
   if (p === '/api/chat') {
-    const text = String(body.text || '');
-    if (!text) { SIM.step = 1; return j(DATA.greet); }
-    if (SIM.step <= 1) { SIM.step = 2; return j(DATA.ask2); }
-    // 任何时候说「留 WPS / 留 Office」都换一版卡片
-    const isWps = /留\s*wps|wps.{0,4}(留|就行)/i.test(text);
-    const isOffice = /留\s*office|office.{0,4}(留|就行)/i.test(text);
-    if (isWps || isOffice) { SIM.step = 3; return j(DATA.variants[isWps ? 'wps' : 'office']); }
-    if (SIM.step === 2) { SIM.step = 3; return j(DATA.variants.keep); }
+    const text = String(body.text || '').trim();
+    if (!text) return j(DATA.greet);
+    if (/不用了|都别动|先不动|先别|算了|都不做/.test(text)) return j(DATA.stop);
+    if (/就按这个|按这个来|执行吧|开始吧|就这样|定了|可以执行|照这个做/.test(text)) return j({ say: DATA.confirm.say, keepPrev: true });
+    const usage = /打游戏|游戏|开黑|网游|联机|3A/.test(text) ? 'game'
+      : /剪视频|剪辑|设计|画画|修图|达芬奇|adobe/i.test(text) ? 'create'
+      : /写代码|编程|开发|代码|前端|后端|全栈|嵌入式/.test(text) ? 'code'
+      : /学习|上课|作业|论文|考研|办公|学生/.test(text) ? 'study' : '';
+    if (usage) return j(DATA[usage]);
     // 卡片出来以后可以追问；答案在构建时由真实的本地问答模块算好
     const hit = (DATA.answers || []).find(a => new RegExp(a.re, 'i').test(text));
-    if (hit) return j({ say: hit.say });
-    return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。' });
+    if (hit) return j({ say: hit.say, keepPrev: true });
+    return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。', keepPrev: true });
   }
   if (p === '/api/execute') return j(execCard(body.card || {}));
   if (p === '/api/undo') {
@@ -349,7 +400,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -449,7 +500,7 @@ function renderReport() {
   }
 }
 
-const ACTION_LABEL = { disable_startup: '关掉开机自启', uninstall_app: '卸载软件', open_settings: '打开设置页' };
+const ACTION_LABEL = { disable_startup: '关掉开机自启', uninstall_app: '卸载软件', install_app: '安装软件', open_settings: '打开设置页' };
 
 function renderLog() {
   const box = $('#log');
@@ -483,7 +534,7 @@ function scroll() { const t = $('#thread'); t.scrollTop = t.scrollHeight; }
 
 function bubble(role, text) {
   const m = el('div', 'msg ' + (role === 'user' ? 'user' : ''));
-  m.append(el('div', 'av', role === 'user' ? '你' : '开'));
+  m.append(el('div', 'av', role === 'user' ? '你' : '小'));
   const b = el('div', 'body', text);
   m.append(b);
   $('#thread').append(m);
@@ -506,11 +557,18 @@ function send(text) {
   $('#input').value = '';
   bubble('user', text);
   S.busy = true;
+  const pending = bubble('ai', '正在想…');
+  pending.classList.add('pending');
   api('/api/chat', { text }).then(out => {
+    pending.remove();
     const m = bubble('ai', out.say);
-    if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || ['好', '不用了'], send));
+    if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || [], send));
+    if (out.clear) {
+      document.querySelectorAll('#thread .cards').forEach(n => n.remove());
+      S.cards = []; S.picked = new Set();
+    }
     if (out.cards) renderCards(out.cards, !out.keepPrev);
-  }).catch(e => bubble('ai', '出错了：' + e.message)).finally(() => { S.busy = false; });
+  }).catch(e => { pending.remove(); bubble('ai', '出错了：' + e.message); }).finally(() => { S.busy = false; });
 }
 
 /* ---------------- 卡片 ---------------- */
@@ -648,6 +706,93 @@ async function undo(id, btn) {
   } catch (e) { btn.textContent = '撤销'; alert(e.message); }
 }
 
+/* ---------------- 装软件 ---------------- */
+async function openApps() {
+  if (!S.report) { bubble('ai', '先让体检跑完，我再按这台机器的已装清单给你列。'); return; }
+  $('#appsModal').hidden = false;
+  const box = $('#appsList');
+  box.innerHTML = '<p class="muted">读取装机清单…</p>';
+  $('#appsStatus').textContent = '';
+  try {
+    const r = await api('/api/catalog');
+    S.apps = r.apps || [];
+    S.appPicked = new Set();
+    renderApps();
+  } catch (e) {
+    box.innerHTML = '';
+    box.append(el('p', 'muted', '清单没读到：' + e.message));
+  }
+}
+
+function renderApps() {
+  const box = $('#appsList');
+  box.innerHTML = '';
+  for (const app of S.apps) {
+    const row = el('label', 'app-row' + (app.installed ? ' on' : '') + (app.lastError ? ' bad' : ''));
+    row.dataset.app = app.id;
+    const cb = el('input');
+    cb.type = 'checkbox';
+    cb.disabled = !!app.installed;
+    cb.checked = S.appPicked.has(app.id);
+    cb.onchange = () => {
+      if (cb.checked) S.appPicked.add(app.id); else S.appPicked.delete(app.id);
+      syncApps();
+    };
+    row.append(cb);
+    const main = el('div', 'app-main');
+    const nm = el('div', 'app-name');
+    nm.append(el('span', null, app.name), el('span', 'app-tag', app.tag || ''));
+    main.append(nm, el('p', null, app.desc || ''));
+    row.append(main);
+    row.append(el('span', 'app-state', app.installed ? '已装' : (app.lastError || '')));
+    box.append(row);
+  }
+  syncApps();
+}
+
+function syncApps() {
+  const btn = $('#appsInstall');
+  if (!btn) return;
+  btn.textContent = '安装选中的 ' + S.appPicked.size + ' 个';
+  btn.disabled = S.appsBusy || S.appPicked.size === 0;
+  const installed = S.apps.filter(a => a.installed).length;
+  if (!S.appsBusy && !S.apps.length) $('#appsStatus').textContent = '';
+  else if (!S.appsBusy) $('#appsStatus').textContent = installed + ' 个已装 · 勾选 ' + S.appPicked.size + ' 个';
+}
+
+async function installApps() {
+  if (S.appsBusy || !S.appPicked.size) return;
+  S.appsBusy = true;
+  syncApps();
+  const ids = [...S.appPicked];
+  let ok = 0, bad = 0, last = '';
+  for (const id of ids) {
+    const app = S.apps.find(a => a.id === id);
+    if (!app) continue;
+    const row = document.querySelector('.app-row[data-app="' + id + '"]');
+    if (row) { const st = row.querySelector('.app-state'); if (st) st.textContent = '安装中…'; }
+    try {
+      const r = await api('/api/execute', { card: { action: 'install_app', target: { id: app.id, name: app.name }, title: '安装 ' + app.name } });
+      if (r.entry) S.journal.push(r.entry);
+      if (r.ok) { app.installed = true; app.lastError = ''; ok++; if (row) row.classList.add('on'); }
+      else { app.lastError = '✕ ' + (r.detail || '失败'); last = app.lastError; bad++; if (row) { row.classList.add('bad'); const st = row.querySelector('.app-state'); if (st) st.textContent = app.lastError; } }
+      renderLog();
+    } catch (e) {
+      app.lastError = '✕ ' + e.message; last = app.lastError; bad++;
+      if (row) { row.classList.add('bad'); const st = row.querySelector('.app-state'); if (st) st.textContent = app.lastError; }
+    }
+    if (bad) break; // 失败即停，和动作执行保持一致
+  }
+  S.appsBusy = false;
+  S.appPicked = new Set();
+  renderApps();
+  if (bad) $('#appsStatus').textContent = '停了：' + last;
+  else $('#appsStatus').textContent = '完成 ' + ok + ' 个，可在右侧日志里撤销';
+  if (ok) bubble('ai', '装好了 ' + ok + ' 个。想退就点右边日志里的「撤销」——装完的撤销就是把它卸掉。');
+}
+
+function closeApps() { $('#appsModal').hidden = true; }
+
 /* ---------------- 体检流程 ---------------- */
 function showScan() {
   const t = $('#thread');
@@ -699,9 +844,13 @@ function emptyState() {
 }
 
 async function greet() {
+  const pending = bubble('ai', '正在看这台机器…');
+  pending.classList.add('pending');
   const out = await api('/api/chat', { text: '' });
+  pending.remove();
   const m = bubble('ai', out.say);
   if (out.ask) m.querySelector('.body').append(chips(out.ask.chips || [], send));
+  if (out.clear) document.querySelectorAll('#thread .cards').forEach(n => n.remove());
   if (out.cards) renderCards(out.cards);
 }
 
@@ -740,6 +889,12 @@ $('#pillAI').onclick = async () => {
     bubble('ai', '这个 key 没存进去，再试一次。');
   }
 };
+
+$('#btnApps').onclick = openApps;
+$('#appsClose').onclick = closeApps;
+$('#appsInstall').onclick = installApps;
+$('#appsModal').addEventListener('click', (e) => { if (e.target.id === 'appsModal') closeApps(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#appsModal').hidden) closeApps(); });
 
 $('#send').onclick = () => send($('#input').value);
 $('#input').addEventListener('keydown', e => { if (e.key === 'Enter') send($('#input').value); });

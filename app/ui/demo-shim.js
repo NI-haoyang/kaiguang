@@ -53,18 +53,19 @@ window.fetch = async (url, opt) => {
     return j({ running: SIM.running, lines: SIM.lines, error: null, ready: SIM.reported });
   }
   if (p === '/api/chat') {
-    const text = String(body.text || '');
-    if (!text) { SIM.step = 1; return j(DATA.greet); }
-    if (SIM.step <= 1) { SIM.step = 2; return j(DATA.ask2); }
-    // 任何时候说「留 WPS / 留 Office」都换一版卡片
-    const isWps = /留\s*wps|wps.{0,4}(留|就行)/i.test(text);
-    const isOffice = /留\s*office|office.{0,4}(留|就行)/i.test(text);
-    if (isWps || isOffice) { SIM.step = 3; return j(DATA.variants[isWps ? 'wps' : 'office']); }
-    if (SIM.step === 2) { SIM.step = 3; return j(DATA.variants.keep); }
+    const text = String(body.text || '').trim();
+    if (!text) return j(DATA.greet);
+    if (/不用了|都别动|先不动|先别|算了|都不做/.test(text)) return j(DATA.stop);
+    if (/就按这个|按这个来|执行吧|开始吧|就这样|定了|可以执行|照这个做/.test(text)) return j({ say: DATA.confirm.say, keepPrev: true });
+    const usage = /打游戏|游戏|开黑|网游|联机|3A/.test(text) ? 'game'
+      : /剪视频|剪辑|设计|画画|修图|达芬奇|adobe/i.test(text) ? 'create'
+      : /写代码|编程|开发|代码|前端|后端|全栈|嵌入式/.test(text) ? 'code'
+      : /学习|上课|作业|论文|考研|办公|学生/.test(text) ? 'study' : '';
+    if (usage) return j(DATA[usage]);
     // 卡片出来以后可以追问；答案在构建时由真实的本地问答模块算好
     const hit = (DATA.answers || []).find(a => new RegExp(a.re, 'i').test(text));
-    if (hit) return j({ say: hit.say });
-    return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。' });
+    if (hit) return j({ say: hit.say, keepPrev: true });
+    return j({ say: '静态演示只走到这里。桌面版会接着按你的回答挑动作，而且动手之前先把原值记下来。', keepPrev: true });
   }
   if (p === '/api/execute') return j(execCard(body.card || {}));
   if (p === '/api/undo') {

@@ -46,12 +46,13 @@ async function boot() {
       const js = (code) => win.webContents.executeJavaScript(code, true);
       try {
         const until = async (expr, ms = 90000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await js(expr)) return true; await wait(500); } return false; };
-        await until("document.querySelectorAll('.opt').length > 0");
-        await wait(400);
-        await js("document.querySelectorAll('.opt')[0] && document.querySelectorAll('.opt')[0].click(); true");
-        await wait(1400);
-        await js("(() => { const i = document.querySelector('#input'); i.value = '留 WPS'; document.querySelector('#send').click(); return true; })()");
-        await wait(2600);
+        await until("document.querySelectorAll('.card').length > 0", 120000);
+        await wait(600);
+        const driveText = process.env.KG_DRIVE === 'ask' ? (process.env.KG_ASK_Q || 'TX Mascot 是干什么的') : '打游戏';
+        await js("(() => { const i = document.querySelector('#input'); i.value = " + JSON.stringify(driveText) + "; document.querySelector('#send').click(); return true; })()");
+        await wait(300);
+        await until("!document.querySelector('.pending')", 120000);
+        await wait(800);
         if (process.env.KG_DRIVE === 'exec') {
           await js("document.querySelectorAll('.card .box').forEach(b => b.click()); true");
           await wait(500);
@@ -70,27 +71,14 @@ async function boot() {
 
         if (process.env.KG_DRIVE === 'ask') {
           const snap = async () => await js("JSON.stringify({setCount: document.querySelectorAll('#thread .cards').length, picked: document.querySelectorAll('.card.pick').length, go: (document.querySelector('#go')||{}).textContent, lastSay: ([...document.querySelectorAll('.msg.ai .body')].pop()||{}).textContent, titles: [...document.querySelectorAll('.card h3')].map(h => h.textContent)})");
-          const before = JSON.parse(await snap());
-          // 点卡片标题（不是那个小方块），看整卡能不能勾上 / 取消
-          await js("(() => { const c = document.querySelectorAll('.card')[1]; const h = c && c.querySelector('h3'); h && h.click(); return true; })()");
-          await wait(350);
-          const afterClick = JSON.parse(await snap());
-          // 改主意：留 Office，卡片应该整组换掉
-          await js("(() => { const i = document.querySelector('#input'); i.value = '留 Office'; document.querySelector('#send').click(); return true; })()");
-          await wait(2400);
-          const afterSwitch = JSON.parse(await snap());
-          // 追问一个具体软件
-          const askQ = process.env.KG_ASK_Q || '迈克菲能删吗';
-          await js("(() => { const i = document.querySelector('#input'); i.value = " + JSON.stringify(askQ) + "; document.querySelector('#send').click(); return true; })()");
-          await wait(2000);
-          const afterAsk = JSON.parse(await snap());
-          const out = { before, afterClick, afterSwitch, afterAsk };
+          const out = { afterAsk: JSON.parse(await snap()) };
           if (process.env.KG_DRIVE_OUT) require('node:fs').writeFileSync(process.env.KG_DRIVE_OUT, JSON.stringify(out, null, 2), 'utf8');
           console.log('drive ask: ' + JSON.stringify(out));
         }
       } catch (e) { console.error('drive failed', e); }
       if (process.env.KG_SHOT) {
         try {
+          if (process.env.KG_SHOT_TOP) await js("document.querySelector('#thread') && (document.querySelector('#thread').scrollTop = 0); true");
           win.show(); win.focus();
           const img = await Promise.race([win.webContents.capturePage(), new Promise((r) => setTimeout(() => r(null), 6000))]);
           if (img) require('node:fs').writeFileSync(process.env.KG_SHOT, img.toPNG());
