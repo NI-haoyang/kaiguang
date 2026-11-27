@@ -63,6 +63,13 @@ async function boot() {
         }
         console.log('drive done: cards=' + await js("document.querySelectorAll('.card').length"));
 
+        if (process.env.KG_DRIVE === 'disk') {
+          await js("document.querySelector('#btnDisk') && document.querySelector('#btnDisk').click(); true");
+          await until("document.querySelectorAll('#diskBody .drive').length > 0", 45000);
+          await wait(700);
+          console.log('drive disk: drives=' + await js("document.querySelectorAll('#diskBody .drive').length") + ' rows=' + await js("document.querySelectorAll('#diskBody .disk-row').length"));
+        }
+
         if (process.env.KG_DRIVE === 'apps') {
           await js("document.querySelector('#btnApps') && document.querySelector('#btnApps').click(); true");
           await wait(1800);

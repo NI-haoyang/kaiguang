@@ -2,7 +2,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -395,6 +395,150 @@ async function installApps() {
 
 function closeApps() { $('#appsModal').hidden = true; }
 
+/* ---------------- 磁盘空间（只读） ---------------- */
+function fmtSize(n) {
+  if (!Number.isFinite(n) || n <= 0) return '0 B';
+  if (n >= 1024 ** 3) return (n / 1024 ** 3).toFixed(1) + ' GB';
+  if (n >= 1024 ** 2) return Math.round(n / 1024 ** 2) + ' MB';
+  return Math.max(0, Math.round(n / 1024)) + ' KB';
+}
+
+async function openDisk() {
+  if (!S.report) { bubble('ai', '先让体检跑完，我再扫磁盘；不然不知道 C 盘现在是什么状况。'); return; }
+  $('#diskModal').hidden = false;
+  if (S.disk && Date.now() - S.disk.at < 60000) { renderDisk(S.disk); return; }
+  await scanDiskUI();
+}
+
+async function scanDiskUI(force = false) {
+  if (S.diskBusy) return;
+  S.diskBusy = true;
+  const box = $('#diskBody');
+  const btn = $('#diskRefresh');
+  box.innerHTML = '';
+  box.append(el('p', 'muted', '正在扫 C / D 盘…只读，不删任何文件。大概几秒。'));
+  btn.disabled = true; btn.textContent = '扫描中…';
+  try {
+    const d = await api('/api/disk' + (force ? '?refresh=1' : ''));
+    S.disk = d;
+    renderDisk(d);
+  } catch (e) {
+    box.innerHTML = '';
+    box.append(el('p', 'muted', '扫描没完成：' + e.message));
+  } finally {
+    S.diskBusy = false;
+    btn.disabled = false; btn.textContent = '重新扫描';
+  }
+}
+
+function renderDisk(d) {
+  const box = $('#diskBody');
+  if (!d) return;
+  box.innerHTML = '';
+  const drives = el('div', 'disk-drives');
+  for (const dr of d.drives || []) {
+    const card = el('div', 'drive');
+    const top = el('div', 'drive-top');
+    top.append(el('b', null, dr.letter + ':'));
+    if (!dr.exists) {
+      top.append(el('span', null, '没有这个盘'));
+      card.append(top);
+      drives.append(card);
+      continue;
+    }
+    if (dr.error) {
+      top.append(el('span', null, dr.error));
+      card.append(top);
+      drives.append(card);
+      continue;
+    }
+    top.append(el('span', null, fmtSize(dr.free) + ' 可用 / ' + fmtSize(dr.total)));
+    const usedPct = dr.total ? Math.min(100, Math.max(0, dr.used / dr.total * 100)) : 0;
+    const freePct = 100 - usedPct;
+    const bar = el('div', 'drive-bar');
+    const fill = el('i');
+    fill.style.width = usedPct.toFixed(1) + '%';
+    if (freePct < 10) fill.className = 'bad'; else if (freePct < 20) fill.className = 'warn';
+    bar.append(fill);
+    const bottom = el('div', 'drive-bottom');
+    bottom.append(el('span', null, '已用 ' + usedPct.toFixed(0) + '%'), el('span', null, '剩 ' + freePct.toFixed(0) + '%'));
+    card.append(top, bar, bottom);
+    drives.append(card);
+  }
+  box.append(drives);
+
+  const clean = (d.clean || []).filter(x => x.exists && (x.bytes > 0 || x.note));
+  const sec1 = el('div', 'disk-sec');
+  const h1 = el('h3');
+  h1.append(document.createTextNode('可以先清的缓存 / 临时文件'), el('span', null, d.cleanupBytes ? '约 ' + fmtSize(d.cleanupBytes) : ''));
+  sec1.append(h1);
+  if (!clean.length) sec1.append(el('p', 'disk-note', '没找到可清的缓存。'));
+  else {
+    const list = el('div', 'disk-list');
+    for (const x of clean) {
+      const row = el('div', 'disk-row');
+      const main = el('div', 'dr-main');
+      main.append(el('b', null, x.label));
+      if (x.note) main.append(el('small', null, x.note));
+      const size = el('span', 'dr-size');
+      size.append(document.createTextNode(x.bytes > 0 ? fmtSize(x.bytes) : '—'));
+      if (x.truncated) size.append(el('em', null, '至少'));
+      row.append(main, size);
+      list.append(row);
+    }
+    sec1.append(list);
+  }
+  box.append(sec1);
+
+  const dirs = (d.dirs || []).filter(x => x.bytes > 0);
+  if (dirs.length) {
+    const sec2 = el('div', 'disk-sec');
+    sec2.append(el('h3', null, '占地方最多的目录'));
+    const list = el('div', 'disk-list');
+    for (const x of dirs) {
+      const row = el('div', 'disk-row');
+      const main = el('div', 'dr-main');
+      main.append(el('b', null, x.name), el('small', null, x.path));
+      const size = el('span', 'dr-size');
+      size.append(document.createTextNode(fmtSize(x.bytes)));
+      if (x.truncated) size.append(el('em', null, '至少'));
+      row.append(main, size);
+      list.append(row);
+    }
+    sec2.append(list, el('p', 'disk-note', '标「至少」的是扫描上限截断后的下限，不是精确值。'));
+    box.append(sec2);
+  }
+
+  const files = d.files || [];
+  if (files.length) {
+    const sec3 = el('div', 'disk-sec');
+    sec3.append(el('h3', null, '大文件（只扫用户目录）'));
+    const list = el('div', 'disk-list');
+    for (const f of files) {
+      const row = el('div', 'disk-row');
+      const main = el('div', 'dr-main');
+      const parent = f.path.slice(0, Math.max(0, f.path.length - f.name.length - 1));
+      main.append(el('b', null, f.name), el('small', null, parent));
+      row.append(main, el('span', 'dr-size', fmtSize(f.bytes)));
+      list.append(row);
+    }
+    sec3.append(list, el('p', 'disk-note', 'D 盘看上面的目录占用；这里不删任何东西。'));
+    box.append(sec3);
+  }
+
+  if (d.notes && d.notes.length) {
+    const note = el('div', 'disk-note');
+    for (const n of d.notes) note.append(el('div', null, '· ' + n));
+    box.append(note);
+  }
+
+  const c = (d.drives || []).find(x => x.letter === 'C' && x.exists && !x.error);
+  if (c) $('#diskHint').textContent = 'C 剩 ' + Math.round(c.free / c.total * 100) + '%' + (d.cleanupBytes ? ' · 可清约 ' + fmtSize(d.cleanupBytes) : '');
+}
+
+function closeDisk() { $('#diskModal').hidden = true; }
+
+
 /* ---------------- 体检流程 ---------------- */
 function showScan() {
   const t = $('#thread');
@@ -496,7 +640,23 @@ $('#btnApps').onclick = openApps;
 $('#appsClose').onclick = closeApps;
 $('#appsInstall').onclick = installApps;
 $('#appsModal').addEventListener('click', (e) => { if (e.target.id === 'appsModal') closeApps(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#appsModal').hidden) closeApps(); });
+
+$('#btnDisk').onclick = openDisk;
+$('#diskClose').onclick = closeDisk;
+$('#diskRefresh').onclick = () => scanDiskUI(true);
+$('#diskSettings').onclick = async () => {
+  const b = $('#diskSettings');
+  b.disabled = true; b.textContent = '正在打开…';
+  try { await api('/api/open', { uri: 'ms-settings:storagesense' }); b.textContent = '已打开'; }
+  catch (e) { b.textContent = '打开失败'; }
+  setTimeout(() => { b.disabled = false; b.textContent = '打开存储感知'; }, 2500);
+};
+$('#diskModal').addEventListener('click', (e) => { if (e.target.id === 'diskModal') closeDisk(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!$('#diskModal').hidden) closeDisk();
+  else if (!$('#appsModal').hidden) closeApps();
+});
 
 $('#send').onclick = () => send($('#input').value);
 $('#input').addEventListener('keydown', e => { if (e.key === 'Enter') send($('#input').value); });

@@ -74,8 +74,28 @@ window.fetch = async (url, opt) => {
     await sleep(180);
     return j({ ok: true, detail: '已恢复原样', ms: 210 });
   }
-  if (p === '/api/journal') return j({ entries: SIM.journal.slice() });
-  if (p === '/api/open') return j({ ok: true, uri: body.uri });
+  if (p === '/api/disk') return j({
+    at: Date.now(), tookMs: 1800,
+    drives: [{ letter: 'C', exists: true, total: 420 * 1024 ** 3, free: 165 * 1024 ** 3, used: 255 * 1024 ** 3 }, { letter: 'D', exists: true, total: 308 * 1024 ** 3, free: 256 * 1024 ** 3, used: 52 * 1024 ** 3 }],
+    clean: [
+      { key: 'temp', label: '用户临时文件', exists: true, bytes: 850 * 1024 ** 2, truncated: false, note: '' },
+      { key: 'wintemp', label: 'Windows 临时文件', exists: true, bytes: 0, truncated: false, note: '部分文件需要管理员权限' },
+      { key: 'recycle', label: '回收站（能读到的部分）', exists: true, bytes: 2.3 * 1024 ** 3, truncated: false, note: '只统计能读到的部分' },
+      { key: 'edge', label: 'Edge 缓存', exists: true, bytes: 360 * 1024 ** 2, truncated: false, note: '' },
+    ],
+    cleanupBytes: 3.5 * 1024 ** 3,
+    dirs: [
+      { drive: 'C', path: 'C:\\ProgramData', name: 'ProgramData', bytes: 5.9 * 1024 ** 3, truncated: false },
+      { drive: 'C', path: 'C:\\Users', name: 'Users（所有用户）', bytes: 4.8 * 1024 ** 3, truncated: true },
+      { drive: 'D', path: 'D:\\Games', name: 'Games', bytes: 2.3 * 1024 ** 3, truncated: true },
+    ],
+    files: [
+      { path: 'C:\\Users\\you\\Downloads\\installer.zip', name: 'installer.zip', bytes: 233 * 1024 ** 2 },
+      { path: 'C:\\Users\\you\\Downloads\\video.mp4', name: 'video.mp4', bytes: 180 * 1024 ** 2 },
+    ],
+    notes: ['目录大小按扫描上限截断，标「至少」的是下限。', '只读扫描，不会删除任何文件。'],
+  });
+  if (p === '/api/journal') return j({ entries: SIM.journal.slice() });  if (p === '/api/open') return j({ ok: true, uri: body.uri });
   if (p === '/api/settings') return j({ ok: true, hasKey: false, model: 'deepseek-flash' });
   return j({});
 };

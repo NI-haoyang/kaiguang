@@ -39,6 +39,11 @@
     </section>
 
     <section class="block">
+      <h2>磁盘空间 <span class="hint" id="diskHint">C / D 盘只读扫描</span></h2>
+      <button id="btnDisk" class="btn ghost wide">扫描 C / D 盘</button>
+    </section>
+
+    <section class="block">
       <h2>验机</h2>
       <div class="verify" id="verify"><p class="muted">还没验。</p></div>
     </section>
@@ -91,6 +96,26 @@
     <div class="modal-foot">
       <span id="appsStatus" class="muted small"></span>
       <button id="appsInstall" class="btn primary" disabled>安装选中的 0 个</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="diskModal" hidden>
+  <div class="modal-card disk-card" role="dialog" aria-modal="true" aria-labelledby="diskTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="diskTitle">磁盘空间</h2>
+        <p class="muted small">只读扫描：只看大小，不删任何文件。真正的清理交给 Windows 存储感知。</p>
+      </div>
+      <button class="modal-x" id="diskClose" aria-label="关闭">×</button>
+    </div>
+    <div class="disk-body" id="diskBody"><p class="muted">还没扫。</p></div>
+    <div class="modal-foot">
+      <span class="muted small">只读扫描 · 不删文件</span>
+      <span class="disk-actions">
+        <button id="diskRefresh" class="btn ghost sm">重新扫描</button>
+        <button id="diskSettings" class="btn primary sm">打开存储感知</button>
+      </span>
     </div>
   </div>
 </div>
