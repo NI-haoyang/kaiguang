@@ -20,7 +20,8 @@ export function save(patch) {
 let BUILTIN = '';
 try { const m = await import('./builtin-key.mjs'); BUILTIN = m.BUILTIN_KEY || ''; } catch {}
 
-export const apiKey = () => process.env.DEEPSEEK_API_KEY || BUILTIN || load().apiKey || '';
+// 优先级：环境变量 → 用户自己填的 → 演示包内置。内置只兜底，不覆盖用户自己的 key。
+export const apiKey = () => process.env.DEEPSEEK_API_KEY || load().apiKey || BUILTIN || '';
 export const hasBuiltin = () => !!BUILTIN;
 export const model = () => process.env.LLM_MODEL || load().model || 'deepseek-flash';
 export const where = () => FILE;
