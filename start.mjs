@@ -109,7 +109,7 @@ const port = Number(process.env.PORT) || await freePort();
 const url = 'http://127.0.0.1:' + port + '/';
 
 console.log('');
-console.log('  开机第一天 · 本地版');
+console.log('  小白助手 · 本地版');
 console.log('  --------------------------------');
 
 let collectOk = true;

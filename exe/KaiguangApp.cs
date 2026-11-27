@@ -76,7 +76,7 @@ static class Program
     static void BuildUi()
     {
         form = new Form();
-        form.Text = "开机第一天";
+        form.Text = "小白助手";
         form.ClientSize = new Size(420, 186);
         form.FormBorderStyle = FormBorderStyle.FixedSingle;
         form.MaximizeBox = false;
@@ -86,7 +86,7 @@ static class Program
         form.Font = new Font("Microsoft YaHei UI", 9F);
 
         Label title = new Label();
-        title.Text = "开机第一天";
+        title.Text = "小白助手";
         title.Font = new Font("Microsoft YaHei UI", 15F, FontStyle.Bold);
         title.ForeColor = Accent;
         title.AutoSize = true;

@@ -1,4 +1,4 @@
-# 开机第一天
+# 小白助手
 
 > 新电脑开荒：先体检，再决定装什么。
 
@@ -22,8 +22,8 @@
 
 ## v0.2 桌面版怎么跑
 
-1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `kaiguang-v0.2.10-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
-2. **把整个 zip 解压到一个空文件夹**，再双击文件夹里的 `开机第一天.exe`。
+1. 从 [Releases](https://github.com/NI-haoyang/kaiguang/releases) 下载 `xiaobai-v0.2.11-win64.zip`（约 113 MB，含 Electron 运行时，不用装 Node、不用联网）。
+2. **把整个 zip 解压到一个空文件夹**，再双击文件夹里的 `小白助手.exe`。
    - 不要只把 exe 复制出来，也不要在压缩软件里直接双击 exe —— Windows 只会把 exe 单独解到临时目录，DLL 和 resources 没跟过来，就会报「找不到 ffmpeg.dll」。
    - 不确定的话，先双击同目录的 `启动前检查.bat`，它会告诉你缺了什么。
 3. 等 20 秒，窗口里自动出体检报告；在中间对话框点一个选项（或直接打字），动作卡片就出来了。之后还能接着打字追问，卡片会跟着换。
@@ -45,7 +45,7 @@
 
 左边「装软件 → 打开装机清单」里是一份内置的 winget 清单：微信、QQ、腾讯会议、WPS Office、网易云音乐、Chrome、7-Zip、Everything、VS Code、Git。已经装了的会自动标灰，不会重复装。
 
-![装软件：只装内置清单里的](docs/img/agent-apps.jpg)
+![装软件：只装内置清单里的](docs/img/agent-apps.png)
 
 - **只认清单**：包 id 写死在 `app/lib/catalog.mjs`，页面不能传任意 id，模型也不能替你拼一个包名。
 - **装完可撤销**：安装成功才写 journal；撤销 = 卸载刚装的那个。winget 报成功但系统里还能查到的，会再用安装包自带的卸载器补一次，仍然以 `winget list` 为准。
@@ -102,7 +102,7 @@
 
     powershell -NoProfile -ExecutionPolicy Bypass -File .\exe\build-exe.ps1
 
-产物在 `dist\开机第一天.exe`。不需要装 Visual Studio、不需要 .NET SDK——用的是系统里自带的 .NET Framework 4.8 编译器（Win10 1903 以后都有）。
+产物在 `dist\小白助手.exe`。不需要装 Visual Studio、不需要 .NET SDK——用的是系统里自带的 .NET Framework 4.8 编译器（Win10 1903 以后都有）。
 
 - **105 KB**：做参照，同样功能打 Electron 约 100 MB，Tauri 约 5 MB，Go + embed 约 7 MB。
 - 为什么这么小：.NET Framework 4.8 是系统组件，不跟着 exe 走；程序本体只有 ~15 KB 的 IL，剩下 90 KB 是内嵌的网页。

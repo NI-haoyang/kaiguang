@@ -70,6 +70,6 @@ createServer(async (req, res) => {
     send(res, 404, 'not found', 'text/plain; charset=utf-8');
   }
 }).listen(PORT, '127.0.0.1', () => {
-  console.log('开机第一天  ->  http://127.0.0.1:' + PORT + '/?demo=1');
+  console.log('小白助手  ->  http://127.0.0.1:' + PORT + '/?demo=1');
   console.log(KEY ? 'AI 深读：已启用 (' + MODEL + ')' : 'AI 深读：未启用（设置 DEEPSEEK_API_KEY 后重启即可）');
 });

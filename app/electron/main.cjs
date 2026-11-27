@@ -1,5 +1,5 @@
 'use strict';
-// 开机第一天 · 桌面壳：起本地服务 → 开窗口 → 关窗口时收摊。
+// 小白助手 · 桌面壳：起本地服务 → 开窗口 → 关窗口时收摊。
 const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -139,7 +139,7 @@ if (!process.env.KG_TEST_NO_LOCK && !app.requestSingleInstanceLock()) {
     win.focus();
   });
   app.whenReady().then(boot).catch((err) => {
-    dialog.showErrorBox('开机第一天启动失败', String(err && err.stack || err));
+    dialog.showErrorBox('小白助手启动失败', String(err && err.stack || err));
     app.quit();
   });
   app.on('window-all-closed', () => app.quit());

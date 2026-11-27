@@ -347,7 +347,7 @@ if (process.argv[1] && process.argv[1].endsWith('server.mjs')) {
   const port = Number(process.env.PORT || (argPort > 0 ? process.argv[argPort + 1] : 0));
   start(port).then(({ port }) => {
     const url = 'http://127.0.0.1:' + port + '/';
-    console.log('开机第一天 · Agent 版');
+    console.log('小白助手 · Agent 版');
     console.log('  ' + url);
     console.log('  AI：' + (aiOn() ? '已启用 (' + (process.env.LLM_MODEL || 'deepseek-flash') + ')' : '未启用（没有 DEEPSEEK_API_KEY，本地规则接管）'));
     if (process.argv.includes('--open')) spawn('cmd', ['/c', 'start', '', url], { windowsHide: true, detached: true, stdio: 'ignore' }).unref();

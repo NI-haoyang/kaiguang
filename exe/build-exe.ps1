@@ -1,5 +1,5 @@
-$ErrorActionPreference = 'Stop'
-# Build 开机第一天.exe with the .NET Framework compiler that ships with Windows.
+﻿$ErrorActionPreference = 'Stop'
+# Build 小白助手.exe with the .NET Framework compiler that ships with Windows.
 # Usage: powershell -ExecutionPolicy Bypass -File build-exe.ps1
 $here  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $proj  = Split-Path -Parent $here

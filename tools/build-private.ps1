@@ -1,7 +1,7 @@
-param(
+﻿param(
   [Parameter(Mandatory=$true)][string]$Key,
-  [string]$Dist = "C:\下载\开机第一天-交付\开机第一天",
-  [string]$ZipOut = "C:\下载\开机第一天-交付\kaiguang-demo-win64.zip",
+  [string]$Dist = "C:\下载\小白助手-交付\小白助手",
+  [string]$ZipOut = "C:\下载\小白助手-交付\kaiguang-demo-win64.zip",
   [int]$Cap = 100
 )
 $ErrorActionPreference = 'Stop'
@@ -27,7 +27,7 @@ Write-Host "code synced"
 
 # 4) 打 zip
 if (Test-Path $ZipOut) { Remove-Item $ZipOut -Force }
-# 保留顶层文件夹（开箱解压后是「开机第一天\」，和公开包一致）
+# 保留顶层文件夹（开箱解压后是「小白助手\」，和公开包一致）
 Compress-Archive -Path $Dist -DestinationPath $ZipOut -CompressionLevel Optimal
 $mb = [math]::Round((Get-Item $ZipOut).Length / 1MB, 1)
 Write-Host "built: $ZipOut ($mb MB)"

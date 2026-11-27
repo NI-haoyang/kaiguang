@@ -144,7 +144,7 @@ def code(lines):
 # ============ 封面 ============
 p = doc.add_paragraph()
 p.paragraph_format.space_before = Pt(40)
-cn(p.add_run("开机第一天"), size=30, bold=True, color=GREEN)
+cn(p.add_run("小白助手"), size=30, bold=True, color=GREEN)
 
 p = doc.add_paragraph()
 cn(p.add_run("Agent 版 · 初步方案与 Demo 说明"), size=15, color=GREY)
@@ -213,7 +213,7 @@ para("浏览器改不了系统，这是硬限制。所以链路只能是：", sp
 code([
     "网页（方案 + 确认）",
     "      ↓  本地 HTTP  127.0.0.1",
-    "开机第一天.exe（Agent 宿主：跑采集、跑执行、推日志）",
+    "小白助手.exe（Agent 宿主：跑采集、跑执行、推日志）",
     "      ↓  受限执行器（白名单动作 + 撤销记录）",
     "动作库（每个动作 = 描述 + 执行 + 撤销）",
 ])
@@ -333,8 +333,8 @@ para("3. 演示机准备：一台干净的 Windows，提前装好并彩排三次
 
 p = doc.add_paragraph()
 p.paragraph_format.space_before = Pt(18)
-cn(p.add_run("附：本方案对应的可运行原型为「开机第一天」v0.1（只读体检部分已完整实现），本文描述的是在其上增加执行层后的 v0.2 形态。"), size=9, color=GREY)
+cn(p.add_run("附：本方案对应的可运行原型为「小白助手」v0.1（只读体检部分已完整实现），本文描述的是在其上增加执行层后的 v0.2 形态。"), size=9, color=GREY)
 
-out = r"C:\Users\Frankni\Documents\deepseek-harness\default-workspace\kaiguang\docs\开机第一天-Agent版初步方案.docx"
+out = r"C:\Users\Frankni\Documents\deepseek-harness\default-workspace\kaiguang\docs\小白助手-Agent版初步方案.docx"
 doc.save(out)
 print("saved:", out)
