@@ -1,22 +1,120 @@
 'use strict';
-// 小白助手 · 桌面壳：起本地服务 → 开窗口 → 关窗口时收摊。
-const { app, BrowserWindow, shell, dialog } = require('electron');
+// 小白助手 · 桌面壳：起本地服务 → 开窗口 → 托盘常驻 → 每周自检。
+const { app, BrowserWindow, shell, dialog, Tray, Menu, Notification, nativeImage, powerMonitor } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+const HIDDEN = process.argv.includes('--autostart') || process.argv.includes('--hidden') || process.env.KG_HIDDEN === '1';
 let server = null;
 let win = null;
+let tray = null;
+let quitting = false;
+let settingsMod = null;
+let scheduleMod = null;
+let iconPath = null;
+let trayTimer = null;
+let weeklyBusy = false;
+
+function appIcon() { return path.join(__dirname, '..', 'ui', 'icon.png'); }
+
+function showWin() {
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
+function notify(title, body) {
+  try {
+    if (Notification.isSupported()) {
+      const n = new Notification({ title, body, icon: appIcon() });
+      n.on('click', showWin);
+      n.show();
+      return;
+    }
+  } catch {}
+  try { if (tray) tray.displayBalloon({ title, content: body }); } catch {}
+}
+
+function autoStartOn() {
+  try { return settingsMod ? settingsMod.load().autoStart !== false : true; } catch { return true; }
+}
+
+function applyAutoStart(on) {
+  if (!app.isPackaged) return;
+  try { app.setLoginItemSettings({ openAtLogin: !!on, args: ['--autostart'] }); } catch {}
+}
+
+function weeklyOn() {
+  try { return settingsMod ? settingsMod.load().weekly !== false : true; } catch { return true; }
+}
+
+function trayMenu() {
+  return Menu.buildFromTemplate([
+    { label: '打开小白助手', click: showWin },
+    { label: '本周体检报告', click: () => { showWin(); setTimeout(() => { try { win.webContents.executeJavaScript("window.kgShowWeekly && window.kgShowWeekly()"); } catch {} }, 700); } },
+    { label: '立即体检', click: () => { showWin(); setTimeout(() => { try { win.webContents.executeJavaScript("window.kgScanNow && window.kgScanNow()"); } catch {} }, 700); } },
+    { type: 'separator' },
+    { label: '开机自启', type: 'checkbox', checked: autoStartOn(), click: (item) => { settingsMod.save({ autoStart: !!item.checked }); applyAutoStart(item.checked); refreshTray(); } },
+    { label: '每周体检', type: 'checkbox', checked: weeklyOn(), click: (item) => { settingsMod.save({ weekly: !!item.checked }); refreshTray(); } },
+    { type: 'separator' },
+    { label: '退出', click: () => { quitting = true; app.quit(); } },
+  ]);
+}
+
+function refreshTray() {
+  if (!tray) return;
+  tray.setContextMenu(trayMenu());
+}
+
+function createTray() {
+  try {
+    let img = nativeImage.createFromPath(path.join(__dirname, '..', 'ui', 'tray.png'));
+    if (img.isEmpty()) img = nativeImage.createFromPath(appIcon());
+    tray = new Tray(img.resize({ width: 16, height: 16 }));
+    tray.setToolTip('小白助手 · 每周帮你体检');
+    tray.on('click', showWin);
+    refreshTray();
+  } catch (e) { console.error('tray failed', e); tray = null; }
+}
+
+async function maybeWeekly() {
+  if (!server || weeklyBusy) return;
+  if (!weeklyOn()) return;
+  const last = Number((scheduleMod && scheduleMod.load().lastWeeklyAt) || 0);
+  if (last && Date.now() - last < WEEK) return;
+  weeklyBusy = true;
+  try {
+    const ok = await server.scan();
+    if (ok === false) { weeklyBusy = false; return; }
+    scheduleMod.save({ lastWeeklyAt: Date.now() });
+    const w = server.weekly();
+    if (w && !w.first) {
+      if (win && win.isVisible()) {
+        try { win.webContents.send('kg-weekly', w); } catch {}
+      } else {
+        notify('本周体检完成', w.short + '。打开小白助手看详情。');
+      }
+    }
+  } catch (e) { console.error('weekly failed', e); }
+  weeklyBusy = false;
+}
 
 async function boot() {
   const entry = pathToFileURL(path.join(__dirname, '..', 'server.mjs')).href;
   const mod = await import(entry);
-  server = await mod.start(0);                       // 0 = 让系统挑一个空闲端口
-  // KG_URL 只给回归测试用：直接把窗口指到某个页面（比如静态演示 html）
-  const url = process.env.KG_URL || ('http://127.0.0.1:' + server.port + '/');
+  server = await mod.start(0);
+  settingsMod = await import(pathToFileURL(path.join(__dirname, '..', 'lib', 'settings.mjs')).href);
+  scheduleMod = await import(pathToFileURL(path.join(__dirname, '..', 'lib', 'schedule.mjs')).href);
+  applyAutoStart(autoStartOn());
 
+  const url = process.env.KG_URL || ('http://127.0.0.1:' + server.port + '/');
+  const icon = appIcon();
   win = new BrowserWindow({
     width: 1380, height: 900, minWidth: 1180, minHeight: 700,
-    backgroundColor: '#080b09', show: false, autoHideMenuBar: true,
+    backgroundColor: '#080b09', show: false, autoHideMenuBar: true, icon,
     titleBarStyle: 'hidden',
     titleBarOverlay: { color: '#080b09', symbolColor: '#93a39a', height: 44 },
     webPreferences: {
@@ -27,7 +125,7 @@ async function boot() {
 
   // 窗口一开始是隐藏的，等首帧画好再显示；但 ready-to-show 偶尔不触发（Chromium 在隐藏窗口上推迟首帧），
   // 所以再加两道兜底：页面加载完 800ms 后显示，最多 4 秒无条件显示。宁可早一点出现，也不要"点了没反应"。
-  const reveal = () => { try { if (win && !win.isDestroyed() && !win.isVisible()) win.show(); } catch {} };
+  const reveal = () => { try { if (!HIDDEN && win && !win.isDestroyed() && !win.isVisible()) win.show(); } catch {} };
   win.loadURL(url);
   win.once('ready-to-show', reveal);
   win.webContents.once('did-finish-load', () => setTimeout(reveal, 800));
@@ -36,8 +134,20 @@ async function boot() {
     console.error('load failed', code, desc, u);
     dialog.showErrorBox('页面没加载出来', '错误码 ' + code + '：' + desc + '\n' + u);
   });
+  win.on('close', (e) => { if (!quitting && tray) { e.preventDefault(); win.hide(); } });
   win.on('closed', () => { win = null; });
 
+  createTray();
+
+  // 自动启动时保持安静；手动打开时第一次留在托盘里给一句提示。
+  if (!HIDDEN && !(scheduleMod.load().trayHint)) {
+    setTimeout(() => {
+      try { notify('小白助手在托盘里', '关掉窗口我也不会走，每周帮你体检一次。要退出，右键托盘图标。'); scheduleMod.save({ trayHint: true }); } catch {}
+    }, 3500);
+  }
+  setTimeout(maybeWeekly, 2600);
+  trayTimer = setInterval(maybeWeekly, 6 * 60 * 60 * 1000);
+  try { powerMonitor.on('resume', maybeWeekly); } catch {}
 
   // 演示驱动：KG_DRIVE=cards|exec，自动走一遍对话，便于出截图与回归测试。
   if (process.env.KG_DRIVE) {
@@ -132,20 +242,21 @@ async function boot() {
   });
 }
 
+app.setAppUserModelId('com.xiaobai.helper');
+
 if (!process.env.KG_TEST_NO_LOCK && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!win) return;
-    // 窗口可能因为上一次的异常还藏在后台：再点一次图标的人期待的是"窗口出现"，不是"进程已存在"。
-    if (!win.isVisible()) win.show();
-    if (win.isMinimized()) win.restore();
-    win.focus();
-  });
+  app.on('second-instance', () => showWin());
+  app.on('activate', () => showWin());
   app.whenReady().then(boot).catch((err) => {
     dialog.showErrorBox('小白助手启动失败', String(err && err.stack || err));
     app.quit();
   });
-  app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => { try { server && server.close(); } catch {} });
+  app.on('window-all-closed', () => { if (!tray) app.quit(); });
+  app.on('before-quit', () => {
+    quitting = true;
+    if (trayTimer) { clearInterval(trayTimer); trayTimer = null; }
+    try { server && server.close(); } catch {}
+  });
 }

@@ -30,7 +30,10 @@ export function buildFindings(r) {
   const push = (f) => findings.push({ level: 'info', tone: 'info', ...f });
 
   const apps = r.apps || [];
-  const startup = r.startup || [];
+  // 自己（小白助手）刚注册的开机自启不算问题，否则会把自己列成「可关掉」的笑话。
+  const startup = (r.startup || []).filter(s => !/com\.xiaobai|xiaobai|小白助手/i.test(String(s.name || '') + ' ' + String(s.command || '')));
+  if (Array.isArray(r.startup)) r.startup = startup;
+  if (r.counts) r.counts.startup = startup.length;
   const services = r.services || [];
   const sec = r.security || {};
   const h = r.health || {};

@@ -94,7 +94,9 @@ foreach ($k in $keys) {
 Write-Host "##step 检查开机自启"
 $startup = New-Object System.Collections.ArrayList
 Get-CimInstance Win32_StartupCommand | ForEach-Object {
-  [void]$startup.Add([ordered]@{ name = Sanitize $_.Name; command = Sanitize $_.Command; source = Sanitize $_.Location })
+  $n = Sanitize $_.Name; $c = Sanitize $_.Command
+  if ($n -match 'com\.xiaobai|小白助手' -or $c -match 'com\.xiaobai|小白助手\.exe') { return }
+  [void]$startup.Add([ordered]@{ name = $n; command = $c; source = Sanitize $_.Location })
 }
 $runKeys = @(
   'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run',
@@ -104,7 +106,9 @@ foreach ($rk in $runKeys) {
   $item = Get-ItemProperty $rk
   if ($item) {
     $item.PSObject.Properties | Where-Object { $_.Name -notmatch '^PS' } | ForEach-Object {
-      [void]$startup.Add([ordered]@{ name = Sanitize $_.Name; command = Sanitize ([string]$_.Value); source = $rk.Replace('HKCU:','HKCU').Replace('HKLM:','HKLM') })
+      $n = Sanitize $_.Name; $c = Sanitize ([string]$_.Value)
+      if ($n -match 'com\.xiaobai|小白助手' -or $c -match 'com\.xiaobai|小白助手\.exe') { return }
+      [void]$startup.Add([ordered]@{ name = $n; command = $c; source = $rk.Replace('HKCU:','HKCU').Replace('HKLM:','HKLM') })
     }
   }
 }

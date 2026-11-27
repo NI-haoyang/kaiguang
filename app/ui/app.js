@@ -2,7 +2,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false, cleanPicked: new Set() };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false, disk: null, diskBusy: false, cleanPicked: new Set(), weeklyShownAt: 0 };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -686,10 +686,15 @@ async function scanNow() {
       S.report = st.report; S.analysis = st.analysis; S.journal = st.journal || [];
       renderLeft(); renderLog();
       $('#thread').innerHTML = '';
+      if (st.weekly && st.weekly.unread) showWeekly(st.weekly);
       greet();
     }
   }, 400);
 }
+
+// 给托盘/主进程用：立即体检、显示本周报告
+window.kgScanNow = scanNow;
+window.kgShowWeekly = async () => { try { showWeekly(await api('/api/weekly')); } catch {} };
 
 function emptyState() {
   const t = $('#thread');
@@ -701,6 +706,15 @@ function emptyState() {
   b.onclick = scanNow;
   box.append(b);
   t.append(box);
+}
+
+function showWeekly(w) {
+  if (!w || !w.text || !w.at || S.weeklyShownAt === w.at) return;
+  S.weeklyShownAt = w.at;
+  const d = new Date(w.at);
+  const day = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  bubble('ai', '【本周体检 · ' + day + '】\n' + w.text);
+  api('/api/weekly/seen', { at: w.at }).catch(() => {});
 }
 
 async function greet() {
@@ -716,6 +730,7 @@ async function greet() {
 
 async function boot() {
   startLive();
+  if (window.kgDesktop && window.kgDesktop.onWeekly) window.kgDesktop.onWeekly(showWeekly);
   const st = await api('/api/state');
   S.ai = !!st.ai; S.model = st.model;
   $('#pillAI').textContent = st.ai ? 'AI 已连接' : '本地规则';
@@ -724,8 +739,8 @@ async function boot() {
     S.report = st.report; S.analysis = st.analysis; S.journal = st.journal || [];
     renderLeft(); renderLog();
     if (st.scanning) { showScan(); return scanNow(); }
-    // 有缓存：直接进对话
-    const last = S.journal.length;
+    // 有缓存：直接进对话；本周报告排在问候前面
+    if (st.weekly && st.weekly.unread) showWeekly(st.weekly);
     greet();
   } else {
     // 第一次打开：不等用户点，直接开始体检（双击到出报告 20 秒）

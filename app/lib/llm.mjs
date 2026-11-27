@@ -167,7 +167,7 @@ export function localStep(state, report, analysis) {
   return { say: '按你的情况我列了下面几条。每条都写清了为什么，不想要的取消勾选就行。', cards: buildCards(state, report, a) };
 }
 
-const KEEP_RE = /deepseek|clash|v2ray|vpn|proxy|代理|input|输入法|ime\b|driver|驱动|nvidia|radeon|intel|audio|声卡|realtek|defender|securityhealth|sysdiag|huorong|火绒|everything|feishu|飞书|mchose|邮箱大师|snowshot|微信|wechat|qq\b|steam|epic|battle\.net/i;
+const KEEP_RE = /deepseek|clash|v2ray|vpn|proxy|代理|input|输入法|ime\b|driver|驱动|nvidia|radeon|intel|audio|声卡|realtek|defender|securityhealth|sysdiag|huorong|火绒|everything|feishu|飞书|mchose|邮箱大师|snowshot|微信|wechat|qq\b|steam|epic|battle\.net|xiaobai|小白助手|com\.xiaobai/i;
 const DECO = /mascot|aura|armoury|armory|rog\b|asus\b|glidex|myasus|桌宠|olympus|framework/i;
 const PRELOAD = /autolaunch|preload|updater|update|assistant|助手/i;
 

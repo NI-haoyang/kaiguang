@@ -14,6 +14,9 @@ import * as settings from './lib/settings.mjs';
 import { scanDisk } from './lib/disk.mjs';
 import { cleanSafe } from './lib/clean.mjs';
 import { live } from './lib/live.mjs';
+import * as history from './lib/history.mjs';
+import * as schedule from './lib/schedule.mjs';
+import { buildWeekly } from './lib/weekly.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -40,7 +43,8 @@ function originOk(req) {
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
 
-const S = { report: null, analysis: null, history: [], lastCards: [], lastSig: '', lastError: '', scan: { running: false, lines: [], error: null } };
+const S = { report: null, analysis: null, history: [], lastCards: [], lastSig: '', lastError: '', weekly: null, scan: { running: false, lines: [], error: null } };
+let scanPromise = null;
 
 // 装/卸成功后把内存里的已装清单一起改掉，否则关掉弹窗再打开还是旧状态。
 function syncInstalled(app, on) {
@@ -65,8 +69,20 @@ function saveCache(r) {
   try { fs.mkdirSync(DATA, { recursive: true }); fs.writeFileSync(CACHE, JSON.stringify(r), 'utf8'); } catch {}
 }
 
+function weeklyPayload() {
+  if (!S.weekly) return null;
+  const seen = Number(schedule.load().lastSeenWeeklyAt || 0);
+  return {
+    at: S.weekly.at,
+    text: S.weekly.text,
+    short: S.weekly.short,
+    first: !!S.weekly.first,
+    unread: !S.weekly.first && S.weekly.at > seen,
+  };
+}
+
 function scan() {
-  if (S.scan.running) return;
+  if (scanPromise) return scanPromise;
   S.scan = { running: true, lines: [], error: null };
   fs.mkdirSync(DATA, { recursive: true });
   const out = path.join(DATA, 'report.json');
@@ -79,14 +95,32 @@ function scan() {
   };
   ps.stdout.on('data', onData);
   ps.stderr.on('data', () => {});
-  ps.on('close', (code) => {
-    try {
-      const r = JSON.parse(fs.readFileSync(out, 'utf8'));
-      S.report = r; S.analysis = buildFindings(r); saveCache(r);
-      S.history = []; S.lastCards = []; S.lastSig = '';
-    } catch (e) { S.scan.error = '采集失败（' + code + '）：' + e.message; }
+  let resolvePromise = null;
+  let settled = false;
+  const finish = (code, err) => {
+    if (settled) return;
+    settled = true;
+    if (!err) {
+      try {
+        const r = JSON.parse(fs.readFileSync(out, 'utf8'));
+        S.report = r; S.analysis = buildFindings(r); saveCache(r);
+        S.history = []; S.lastCards = []; S.lastSig = '';
+        S.weekly = buildWeekly({ report: r, analysis: S.analysis });
+        history.append(r, S.analysis);
+      } catch (e) { S.scan.error = '采集失败（' + code + '）：' + e.message; }
+    } else {
+      S.scan.error = '采集失败：' + err.message;
+    }
     S.scan.running = false;
+    scanPromise = null;
+    if (resolvePromise) resolvePromise(!S.scan.error);
+  };
+  scanPromise = new Promise((resolve) => {
+    resolvePromise = resolve;
+    ps.on('error', (e) => finish(-1, e));
+    ps.on('close', (code) => finish(code, null));
   });
+  return scanPromise;
 }
 
 const json = (res, obj, code = 200) => {
@@ -128,6 +162,7 @@ async function handle(req, res) {
     ready: !!S.report,
     report: S.report, analysis: S.analysis ? { score: S.analysis.score, findings: S.analysis.findings, counts: S.analysis.counts, verify: S.analysis.verify, metrics: S.analysis.metrics } : null,
     journal: journal.list(),
+    weekly: weeklyPayload(),
   });
 
   if (p === '/api/catalog') {
@@ -168,6 +203,14 @@ async function handle(req, res) {
 
   if (p === '/api/scan' && req.method === 'POST') { scan(); return json(res, { ok: true }); }
   if (p === '/api/scan/status') return json(res, { running: S.scan.running, lines: S.scan.lines, error: S.scan.error, ready: !!S.report });
+
+  if (p === '/api/weekly') return json(res, weeklyPayload());
+  if (p === '/api/weekly/seen' && req.method === 'POST') {
+    const body = await readBody(req);
+    const at = Number(body.at || (S.weekly && S.weekly.at) || Date.now());
+    schedule.save({ lastSeenWeeklyAt: at });
+    return json(res, { ok: true });
+  }
 
   if (p === '/api/chat' && req.method === 'POST') {
     const { text } = await readBody(req);
@@ -297,7 +340,7 @@ export function start(port = 0) {
     server.listen(port, '127.0.0.1', () => {
       const got = server.address().port;
       ORIGINS = new Set(['http://127.0.0.1:' + got, 'http://localhost:' + got]);
-      resolve({ server, port: got, close: () => server.close() });
+      resolve({ server, port: got, close: () => server.close(), scan: () => scan(), weekly: () => weeklyPayload() });
     });
   });
 }
