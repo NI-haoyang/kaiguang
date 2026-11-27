@@ -243,7 +243,27 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .btn.clean{background:#2a1f12;color:#ffcf9a;border-color:#5a4124}
 .btn.clean:hover{border-color:#8a6234}
 .btn.clean:disabled{opacity:.45;cursor:not-allowed}
-@media (max-width:640px){.disk-drives{grid-template-columns:1fr}}.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
+@media (max-width:640px){.disk-drives{grid-template-columns:1fr}}
+
+/* 本机状态（只读遥测） */
+.live{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.live-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.live-cell{border:1px solid var(--line);border-radius:9px;background:#0b1210;padding:8px 9px;min-width:0}
+.live-cell span{display:block;font-size:10.5px;color:var(--dim2);letter-spacing:.4px}
+.live-cell b{display:block;font:600 19px/1.25 var(--mono);color:var(--text);margin-top:1px}
+.live-cell b.hot{color:#ffb27a}
+.live-cell b.muted-v{color:var(--dim2);font-size:15px}
+.live-cell small{display:block;font-size:10px;color:var(--dim);line-height:1.45;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-bars{display:flex;flex-direction:column;gap:6px;margin-top:1px}
+.live-bar{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--dim2)}
+.live-bar span{flex:0 0 26px}
+.live-bar i{flex:1;height:5px;border-radius:99px;background:#1a2420;overflow:hidden}
+.live-bar i em{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3fbf79,#7ff0ad)}
+.live-disks{border-top:1px solid var(--line);padding-top:7px;display:flex;flex-direction:column;gap:4px}
+.live-disk{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--dim)}
+.live-disk b{font-family:var(--mono);font-weight:500;color:#b9d8c6;white-space:nowrap}
+.live-model{font-size:10px;color:var(--dim2);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1380px){.grid{grid-template-columns:340px minmax(380px,1fr) 290px}.live-cell b{font-size:17px}}.demo-bar{flex:0 0 auto;display:flex;gap:10px;align-items:center;justify-content:center;padding:7px 14px;font-size:12.5px;color:#08150e;background:linear-gradient(90deg,#3ddc84,#7ff0b4)}
 .demo-bar b{font-weight:700}
 .demo-bar span{opacity:.78}
 </style>
@@ -310,8 +330,12 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
     </div>
   </section>
 
-  <!-- 右：执行日志 -->
+  <!-- 右：本机状态 + 执行日志 -->
   <aside class="col right">
+    <section class="block live-block">
+      <h2>本机状态 <span class="hint" id="liveAt">读取中</span></h2>
+      <div class="live" id="live"><p class="muted small">正在读 CPU、内存、温度和磁盘…</p></div>
+    </section>
     <section class="block">
       <h2>执行日志 <span class="hint" id="logCount"></span></h2>
       <div class="log" id="log"><p class="muted">还没有执行任何动作。</p></div>
@@ -441,6 +465,15 @@ window.fetch = async (url, opt) => {
     await sleep(180);
     return j({ ok: true, detail: '已恢复原样', ms: 210 });
   }
+  if (p === '/api/live') return j({
+    demo: true, at: Date.now(),
+    cpu: { model: '演示数据 · 不读取本机', cores: 8, usage: 23, baseGhz: 2.5, ghz: 3.4 },
+    mem: { total: 16 * 1024 ** 3, free: 3 * 1024 ** 3, used: 13 * 1024 ** 3, pct: 81 },
+    disks: [{ letter: 'C', total: 420 * 1024 ** 3, free: 165 * 1024 ** 3, used: 255 * 1024 ** 3, pct: 61 }, { letter: 'D', total: 308 * 1024 ** 3, free: 256 * 1024 ** 3, used: 52 * 1024 ** 3, pct: 17 }],
+    thermal: { c: 48, source: '演示数据' },
+    gpu: { name: 'NVIDIA GeForce（演示）', temp: 56, util: 12 },
+    probeReady: true, uptime: 3600,
+  });
   if (p === '/api/disk') return j({
     at: Date.now(), tookMs: 1800,
     drives: [{ letter: 'C', exists: true, total: 420 * 1024 ** 3, free: 165 * 1024 ** 3, used: 255 * 1024 ** 3 }, { letter: 'D', exists: true, total: 308 * 1024 ** 3, free: 256 * 1024 ** 3, used: 52 * 1024 ** 3 }],
@@ -1068,6 +1101,71 @@ async function runClean() {
 function closeDisk() { $('#diskModal').hidden = true; }
 
 
+/* ---------------- 本机状态（只读遥测） ---------------- */
+let liveTimer = null;
+function fmtGB(n) { return (Number(n || 0) / 1073741824).toFixed(1); }
+function liveCell(label, value, sub, cls) {
+  const c = el('div', 'live-cell');
+  c.append(el('span', null, label));
+  const b = el('b', cls || null, value);
+  c.append(b, el('small', null, sub || ''));
+  return c;
+}
+function liveBar(label, pct) {
+  const row = el('div', 'live-bar');
+  row.append(el('span', null, label));
+  const bar = el('i'); const fill = el('em');
+  fill.style.width = Math.max(0, Math.min(100, Number(pct) || 0)) + '%';
+  bar.append(fill); row.append(bar);
+  return row;
+}
+function renderLive(d) {
+  const box = $('#live');
+  if (!box || !d) return;
+  const cpu = d.cpu || {}; const mem = d.mem || {}; const gpu = d.gpu; const th = d.thermal;
+  box.innerHTML = '';
+  const grid = el('div', 'live-grid');
+  const cpuSub = [cpu.ghz ? '≈' + Number(cpu.ghz).toFixed(1) + ' GHz' : (cpu.baseGhz ? Number(cpu.baseGhz).toFixed(1) + ' GHz 基准' : ''), (cpu.cores || '') + ' 核'].filter(Boolean).join(' · ');
+  grid.append(liveCell('CPU', (cpu.usage != null ? cpu.usage : '—') + '%', cpuSub));
+  grid.append(liveCell('内存', (mem.pct != null ? mem.pct : '—') + '%', fmtGB(mem.used) + ' / ' + fmtGB(mem.total) + ' GB'));
+  const gpuVal = gpu && gpu.temp != null ? Math.round(gpu.temp) + '°C' : '—';
+  const gpuSub = gpu ? ((gpu.util != null ? gpu.util + '% · ' : '') + String(gpu.name || 'NVIDIA GPU')) : (d.probeReady ? '未检测到 NVIDIA' : '读取中…');
+  grid.append(liveCell('GPU 温度', gpuVal, gpuSub, gpu && gpu.temp >= 75 ? 'hot' : (gpu ? null : 'muted-v')));
+  const thVal = th && th.c != null ? Math.round(th.c) + '°C' : '—';
+  const thSub = th ? (th.source || 'ACPI 热区') : (d.probeReady ? '此机不提供' : '读取中…');
+  grid.append(liveCell('热区温度', thVal, thSub, th && th.c >= 80 ? 'hot' : (th ? null : 'muted-v')));
+  box.append(grid);
+  const bars = el('div', 'live-bars');
+  bars.append(liveBar('CPU', cpu.usage), liveBar('内存', mem.pct));
+  box.append(bars);
+  const disks = el('div', 'live-disks');
+  for (const x of (d.disks || [])) {
+    const row = el('div', 'live-disk');
+    row.append(el('span', null, x.letter + ':' + (x.pct != null ? ' 剩 ' + (100 - x.pct) + '%' : '')), el('b', null, fmtSize(x.free) + ' 可用'));
+    disks.append(row);
+  }
+  if (disks.childNodes.length) box.append(disks);
+  const model = el('div', 'live-model', String(cpu.model || ''));
+  box.append(model);
+  const at = $('#liveAt');
+  if (at) {
+    if (d.demo) at.textContent = '静态演示';
+    else {
+      const t = new Date(d.at || Date.now());
+      at.textContent = [t.getHours(), t.getMinutes(), t.getSeconds()].map(n => String(n).padStart(2, '0')).join(':') + ' 更新';
+    }
+  }
+}
+async function refreshLive() {
+  if (document.hidden) return;
+  try { renderLive(await api('/api/live')); } catch {}
+}
+function startLive() {
+  if (liveTimer) return;
+  refreshLive();
+  liveTimer = setInterval(refreshLive, 3000);
+}
+
 /* ---------------- 体检流程 ---------------- */
 function showScan() {
   const t = $('#thread');
@@ -1130,6 +1228,7 @@ async function greet() {
 }
 
 async function boot() {
+  startLive();
   const st = await api('/api/state');
   S.ai = !!st.ai; S.model = st.model;
   $('#pillAI').textContent = st.ai ? 'AI 已连接' : '本地规则';

@@ -13,6 +13,7 @@ import { appById, appInstalled, catalogView } from './lib/catalog.mjs';
 import * as settings from './lib/settings.mjs';
 import { scanDisk } from './lib/disk.mjs';
 import { cleanSafe } from './lib/clean.mjs';
+import { live } from './lib/live.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
@@ -135,6 +136,11 @@ async function handle(req, res) {
     try { fresh = (await wingetInstalledNames()).map((name) => ({ name })); } catch {}
     const all = ((S.report && S.report.apps) || []).concat(fresh);
     return json(res, { apps: catalogView(all) });
+  }
+
+  if (p === '/api/live') {
+    try { return json(res, await live()); }
+    catch (e) { return json(res, { error: '状态读取失败：' + e.message }, 500); }
   }
 
   if (p === '/api/disk') {

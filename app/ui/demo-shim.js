@@ -74,6 +74,15 @@ window.fetch = async (url, opt) => {
     await sleep(180);
     return j({ ok: true, detail: '已恢复原样', ms: 210 });
   }
+  if (p === '/api/live') return j({
+    demo: true, at: Date.now(),
+    cpu: { model: '演示数据 · 不读取本机', cores: 8, usage: 23, baseGhz: 2.5, ghz: 3.4 },
+    mem: { total: 16 * 1024 ** 3, free: 3 * 1024 ** 3, used: 13 * 1024 ** 3, pct: 81 },
+    disks: [{ letter: 'C', total: 420 * 1024 ** 3, free: 165 * 1024 ** 3, used: 255 * 1024 ** 3, pct: 61 }, { letter: 'D', total: 308 * 1024 ** 3, free: 256 * 1024 ** 3, used: 52 * 1024 ** 3, pct: 17 }],
+    thermal: { c: 48, source: '演示数据' },
+    gpu: { name: 'NVIDIA GeForce（演示）', temp: 56, util: 12 },
+    probeReady: true, uptime: 3600,
+  });
   if (p === '/api/disk') return j({
     at: Date.now(), tookMs: 1800,
     drives: [{ letter: 'C', exists: true, total: 420 * 1024 ** 3, free: 165 * 1024 ** 3, used: 255 * 1024 ** 3 }, { letter: 'D', exists: true, total: 308 * 1024 ** 3, free: 256 * 1024 ** 3, used: 52 * 1024 ** 3 }],

@@ -68,8 +68,12 @@
     </div>
   </section>
 
-  <!-- 右：执行日志 -->
+  <!-- 右：本机状态 + 执行日志 -->
   <aside class="col right">
+    <section class="block live-block">
+      <h2>本机状态 <span class="hint" id="liveAt">读取中</span></h2>
+      <div class="live" id="live"><p class="muted small">正在读 CPU、内存、温度和磁盘…</p></div>
+    </section>
     <section class="block">
       <h2>执行日志 <span class="hint" id="logCount"></span></h2>
       <div class="log" id="log"><p class="muted">还没有执行任何动作。</p></div>

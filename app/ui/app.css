@@ -237,3 +237,23 @@ body.desktop .top .pill,body.desktop .top button{-webkit-app-region:no-drag}
 .btn.clean:hover{border-color:#8a6234}
 .btn.clean:disabled{opacity:.45;cursor:not-allowed}
 @media (max-width:640px){.disk-drives{grid-template-columns:1fr}}
+
+/* 本机状态（只读遥测） */
+.live{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.live-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.live-cell{border:1px solid var(--line);border-radius:9px;background:#0b1210;padding:8px 9px;min-width:0}
+.live-cell span{display:block;font-size:10.5px;color:var(--dim2);letter-spacing:.4px}
+.live-cell b{display:block;font:600 19px/1.25 var(--mono);color:var(--text);margin-top:1px}
+.live-cell b.hot{color:#ffb27a}
+.live-cell b.muted-v{color:var(--dim2);font-size:15px}
+.live-cell small{display:block;font-size:10px;color:var(--dim);line-height:1.45;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-bars{display:flex;flex-direction:column;gap:6px;margin-top:1px}
+.live-bar{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--dim2)}
+.live-bar span{flex:0 0 26px}
+.live-bar i{flex:1;height:5px;border-radius:99px;background:#1a2420;overflow:hidden}
+.live-bar i em{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3fbf79,#7ff0ad)}
+.live-disks{border-top:1px solid var(--line);padding-top:7px;display:flex;flex-direction:column;gap:4px}
+.live-disk{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--dim)}
+.live-disk b{font-family:var(--mono);font-weight:500;color:#b9d8c6;white-space:nowrap}
+.live-model{font-size:10px;color:var(--dim2);line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1380px){.grid{grid-template-columns:340px minmax(380px,1fr) 290px}.live-cell b{font-size:17px}}
