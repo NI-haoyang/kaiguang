@@ -9,6 +9,7 @@ import { ACTIONS } from './lib/actions.mjs';
 import * as journal from './lib/journal.mjs';
 import { aiAsk, aiOn, aiReady, aiStep, buildCards, localStep, normalizeCards } from './lib/llm.mjs';
 import { answer } from './lib/ask.mjs';
+import { appById, appInstalled, catalogView } from './lib/catalog.mjs';
 import * as settings from './lib/settings.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -116,6 +117,8 @@ async function handle(req, res) {
     journal: journal.list(),
   });
 
+  if (p === '/api/catalog') return json(res, { apps: catalogView((S.report && S.report.apps) || []) });
+
   if (p === '/api/scan' && req.method === 'POST') { scan(); return json(res, { ok: true }); }
   if (p === '/api/scan/status') return json(res, { running: S.scan.running, lines: S.scan.lines, error: S.scan.error, ready: !!S.report });
 
@@ -222,6 +225,17 @@ async function handle(req, res) {
 
     // 目标必须来自这次体检的结果：名字对不上就不动，来源（HKCU/HKLM）也以报告为准，
     // 免得前端把一条 HKCU 项谎报成 HKLM（或其他方向）而走错注册表根。
+    // 装机清单是唯一的安装源：id 必须原样来自服务端的清单，名字也由服务端还原。
+    if (card.action === 'install_app') {
+      const app = appById(card.target && card.target.id);
+      if (!app) return json(res, { ok: false, detail: '这个包不在装机清单里，我不装。' }, 400);
+      if (appInstalled(app, (S.report && S.report.apps) || [])) {
+        return json(res, { ok: false, detail: '这台已经装了 ' + app.name + '，不用再装。' }, 400);
+      }
+      card.target = { id: app.id, name: app.name };
+      card.title = card.title || ('安装 ' + app.name);
+    }
+
     if (card.action === 'disable_startup' || card.action === 'uninstall_app') {
       const want = card.target && card.target.name;
       const list = card.action === 'disable_startup'

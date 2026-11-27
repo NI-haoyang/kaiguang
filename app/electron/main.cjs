@@ -62,6 +62,12 @@ async function boot() {
         }
         console.log('drive done: cards=' + await js("document.querySelectorAll('.card').length"));
 
+        if (process.env.KG_DRIVE === 'apps') {
+          await js("document.querySelector('#btnApps') && document.querySelector('#btnApps').click(); true");
+          await wait(1800);
+          console.log('drive apps: rows=' + await js("document.querySelectorAll('.app-row').length") + ' installed=' + await js("document.querySelectorAll('.app-row.on').length"));
+        }
+
         if (process.env.KG_DRIVE === 'ask') {
           const snap = async () => await js("JSON.stringify({setCount: document.querySelectorAll('#thread .cards').length, picked: document.querySelectorAll('.card.pick').length, go: (document.querySelector('#go')||{}).textContent, lastSay: ([...document.querySelectorAll('.msg.ai .body')].pop()||{}).textContent, titles: [...document.querySelectorAll('.card h3')].map(h => h.textContent)})");
           const before = JSON.parse(await snap());
@@ -122,7 +128,7 @@ async function boot() {
   });
 }
 
-if (!app.requestSingleInstanceLock()) {
+if (!process.env.KG_TEST_NO_LOCK && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', () => {

@@ -6,6 +6,7 @@ import { digest } from './analyze.mjs';
 import * as settings from './settings.mjs';
 import * as budget from './budget.mjs';
 import { factsFor } from './know.mjs';
+import { appById } from './catalog.mjs';
 
 const KEY = () => settings.apiKey();
 const MODEL = () => settings.model();
@@ -81,6 +82,14 @@ export function normalizeCards(raw, report) {
       title = '去设置里卸载 ' + hit.name;
       why = '系统不允许我自动卸载再装回；带你到设置页，你自己点一下。';
       badge = '需要你自己点';
+    } else if (c.action === 'install_app') {
+      // 只装清单里的包；页面和模型都不能自己拼 id。
+      const app = appById(t.id);
+      if (!app) continue;
+      target = { id: app.id, name: app.name };
+      title = '安装 ' + app.name;
+      why = app.desc + '。装完你可以从日志里撤销（卸载刚装的这个）。';
+      badge = '可撤销 · 装完可卸载';
     } else if (c.action === 'open_settings') {
       const uri = String(t.uri || 'ms-settings:');
       if (!uri.startsWith('ms-settings:')) continue;
@@ -236,7 +245,7 @@ const ASK_SYSTEM = [
   '2. 只能引用体检数据或「内置知识库」里真实出现过的软件名 / 自启项名。两边都没有的，直接说「这个不在这台机器的清单里，我不确定」，不要编。',
   '3. 不要说「建议您」「亲」，像一个懂电脑的朋友，短句，2-4 句说完。',
   '4. 不要输出任何命令、路径或注册表键。',
-  '5. 涉及「能不能删 / 怎么退」时，说清楚：开机自启可以一键关、也能精确撤；软件卸载我不代劳，只把用户带到设置页，因为卸了装不回。',
+  '5. 涉及「能不能删 / 怎么退」时，说清楚：开机自启可以一键关、也能精确撤；软件卸载我不代劳，只把用户带到设置页，因为卸了装不回。用户要装软件时，引导他点左侧「装软件」，说明只从内置清单里装、装完可以卸载撤回，不要输出命令。',
   '',
   '语气示例：',
   '问：TX Mascot 是干什么的？',

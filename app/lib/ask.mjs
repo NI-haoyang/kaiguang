@@ -48,6 +48,7 @@ const REMOVE = /能删|可以删|删了|要不要删|卸载|能不能删|删掉/
 const UNDO = /撤销|退回|恢复原样|后悔|怎么退/;
 const ADMIN = /管理员|uac|权限/;
 const LIST = /哪个能删|哪些能删|能删什么|有什么能删|推荐删|清理什么|该删什么/;
+const INSTALL = /装|安装|下载/;
 
 function removableNotes(report, analysis, facts) {
   const byId = Object.fromEntries((analysis.findings || []).map((f) => [f.id, f]));
@@ -93,7 +94,12 @@ export function answer(text, ctx) {
     return { say: '分两种：你这个账号自己的开机自启，不用管理员；整机级的（HKLM 那几条）要弹一次 UAC，你点「是」才动。改服务、开防火墙这类它不代劳，只把你带到设置页。' };
   }
 
-  // 3) 针对某个具体软件 / 自启项
+  // 3) 要装软件：只引导到左侧装机清单，不在聊天里执行
+  if (INSTALL.test(t) && !REMOVE.test(t)) {
+    return { say: '装软件可以，但安装要你点一下：左边「装软件」里勾微信、QQ、网易云这些，我只从内置清单里装，装完还能从日志里撤销（卸载刚装的）。' };
+  }
+
+  // 4) 针对某个具体软件 / 自启项
   if (!ent) {
     if (WHAT.test(t) || REMOVE.test(t)) {
       return { say: '这个我没把握。我手上只有这次体检采到的名字，没法凭空判断一个我没见过的软件。把名字打全一点再问我——比如「迈克菲联网顾问」；或者问「哪些能删」，我按数据给你列。' };

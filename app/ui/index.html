@@ -33,6 +33,11 @@
 
     <section class="metrics" id="metrics"></section>
 
+    <section class="block apps-block">
+      <h2>装软件 <span class="hint" id="appsHint">新电脑还缺什么</span></h2>
+      <button id="btnApps" class="btn ghost wide">打开装机清单</button>
+    </section>
+
     <section class="block">
       <h2>验机</h2>
       <div class="verify" id="verify"><p class="muted">还没验。</p></div>
@@ -72,6 +77,23 @@
     <p class="foot">失败即停 · 每一步都留痕</p>
   </aside>
 </main>
+
+<div class="modal" id="appsModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="appsTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="appsTitle">装基础软件</h2>
+        <p class="muted small">只装你勾的；从 winget 官方源装，装完可以从日志里撤销（卸载刚装的）。</p>
+      </div>
+      <button class="modal-x" id="appsClose" aria-label="关闭">×</button>
+    </div>
+    <div class="apps-list" id="appsList"></div>
+    <div class="modal-foot">
+      <span id="appsStatus" class="muted small"></span>
+      <button id="appsInstall" class="btn primary" disabled>安装选中的 0 个</button>
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 </body>

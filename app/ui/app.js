@@ -2,7 +2,7 @@ if (window.kgDesktop) document.body.classList.add('desktop');
 const $ = (s) => document.querySelector(s);
 const STEPS = ['读系统与硬件', '看磁盘空间', '数一遍装了多少软件', '检查开机自启', '看后台服务', '查防火墙和防护状态', '验机：电池、硬盘、安装天数', '整理成报告'];
 
-const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false };
+const S = { report: null, analysis: null, journal: [], cards: [], picked: new Set(), busy: false, apps: [], appPicked: new Set(), appsBusy: false };
 
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 
@@ -102,7 +102,7 @@ function renderReport() {
   }
 }
 
-const ACTION_LABEL = { disable_startup: '关掉开机自启', uninstall_app: '卸载软件', open_settings: '打开设置页' };
+const ACTION_LABEL = { disable_startup: '关掉开机自启', uninstall_app: '卸载软件', install_app: '安装软件', open_settings: '打开设置页' };
 
 function renderLog() {
   const box = $('#log');
@@ -301,6 +301,93 @@ async function undo(id, btn) {
   } catch (e) { btn.textContent = '撤销'; alert(e.message); }
 }
 
+/* ---------------- 装软件 ---------------- */
+async function openApps() {
+  if (!S.report) { bubble('ai', '先让体检跑完，我再按这台机器的已装清单给你列。'); return; }
+  $('#appsModal').hidden = false;
+  const box = $('#appsList');
+  box.innerHTML = '<p class="muted">读取装机清单…</p>';
+  $('#appsStatus').textContent = '';
+  try {
+    const r = await api('/api/catalog');
+    S.apps = r.apps || [];
+    S.appPicked = new Set();
+    renderApps();
+  } catch (e) {
+    box.innerHTML = '';
+    box.append(el('p', 'muted', '清单没读到：' + e.message));
+  }
+}
+
+function renderApps() {
+  const box = $('#appsList');
+  box.innerHTML = '';
+  for (const app of S.apps) {
+    const row = el('label', 'app-row' + (app.installed ? ' on' : '') + (app.lastError ? ' bad' : ''));
+    row.dataset.app = app.id;
+    const cb = el('input');
+    cb.type = 'checkbox';
+    cb.disabled = !!app.installed;
+    cb.checked = S.appPicked.has(app.id);
+    cb.onchange = () => {
+      if (cb.checked) S.appPicked.add(app.id); else S.appPicked.delete(app.id);
+      syncApps();
+    };
+    row.append(cb);
+    const main = el('div', 'app-main');
+    const nm = el('div', 'app-name');
+    nm.append(el('span', null, app.name), el('span', 'app-tag', app.tag || ''));
+    main.append(nm, el('p', null, app.desc || ''));
+    row.append(main);
+    row.append(el('span', 'app-state', app.installed ? '已装' : (app.lastError || '')));
+    box.append(row);
+  }
+  syncApps();
+}
+
+function syncApps() {
+  const btn = $('#appsInstall');
+  if (!btn) return;
+  btn.textContent = '安装选中的 ' + S.appPicked.size + ' 个';
+  btn.disabled = S.appsBusy || S.appPicked.size === 0;
+  const installed = S.apps.filter(a => a.installed).length;
+  if (!S.appsBusy && !S.apps.length) $('#appsStatus').textContent = '';
+  else if (!S.appsBusy) $('#appsStatus').textContent = installed + ' 个已装 · 勾选 ' + S.appPicked.size + ' 个';
+}
+
+async function installApps() {
+  if (S.appsBusy || !S.appPicked.size) return;
+  S.appsBusy = true;
+  syncApps();
+  const ids = [...S.appPicked];
+  let ok = 0, bad = 0, last = '';
+  for (const id of ids) {
+    const app = S.apps.find(a => a.id === id);
+    if (!app) continue;
+    const row = document.querySelector('.app-row[data-app="' + id + '"]');
+    if (row) { const st = row.querySelector('.app-state'); if (st) st.textContent = '安装中…'; }
+    try {
+      const r = await api('/api/execute', { card: { action: 'install_app', target: { id: app.id, name: app.name }, title: '安装 ' + app.name } });
+      if (r.entry) S.journal.push(r.entry);
+      if (r.ok) { app.installed = true; app.lastError = ''; ok++; if (row) row.classList.add('on'); }
+      else { app.lastError = '✕ ' + (r.detail || '失败'); last = app.lastError; bad++; if (row) { row.classList.add('bad'); const st = row.querySelector('.app-state'); if (st) st.textContent = app.lastError; } }
+      renderLog();
+    } catch (e) {
+      app.lastError = '✕ ' + e.message; last = app.lastError; bad++;
+      if (row) { row.classList.add('bad'); const st = row.querySelector('.app-state'); if (st) st.textContent = app.lastError; }
+    }
+    if (bad) break; // 失败即停，和动作执行保持一致
+  }
+  S.appsBusy = false;
+  S.appPicked = new Set();
+  renderApps();
+  if (bad) $('#appsStatus').textContent = '停了：' + last;
+  else $('#appsStatus').textContent = '完成 ' + ok + ' 个，可在右侧日志里撤销';
+  if (ok) bubble('ai', '装好了 ' + ok + ' 个。想退就点右边日志里的「撤销」——装完的撤销就是把它卸掉。');
+}
+
+function closeApps() { $('#appsModal').hidden = true; }
+
 /* ---------------- 体检流程 ---------------- */
 function showScan() {
   const t = $('#thread');
@@ -393,6 +480,12 @@ $('#pillAI').onclick = async () => {
     bubble('ai', '这个 key 没存进去，再试一次。');
   }
 };
+
+$('#btnApps').onclick = openApps;
+$('#appsClose').onclick = closeApps;
+$('#appsInstall').onclick = installApps;
+$('#appsModal').addEventListener('click', (e) => { if (e.target.id === 'appsModal') closeApps(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#appsModal').hidden) closeApps(); });
 
 $('#send').onclick = () => send($('#input').value);
 $('#input').addEventListener('keydown', e => { if (e.key === 'Enter') send($('#input').value); });
