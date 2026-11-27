@@ -5,7 +5,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { buildFindings } from './lib/analyze.mjs';
-import { ACTIONS } from './lib/actions.mjs';
+import { ACTIONS, wingetInstalledNames } from './lib/actions.mjs';
 import * as journal from './lib/journal.mjs';
 import { aiAsk, aiOn, aiReady, aiStep, buildCards, localStep, normalizeCards } from './lib/llm.mjs';
 import { answer } from './lib/ask.mjs';
@@ -40,6 +40,18 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=u
 const S = { report: null, analysis: null, step: 0, facts: {}, history: [], lastCards: [], scan: { running: false, lines: [], error: null } };
 
 const IDENTITY = '我是这个工具里的本地助手，跑在你这台机器上：读体检结果、解释每张卡是干什么的、能不能退。不是通用聊天机器人——没体检数据的事我不瞎猜。';
+
+// 装/卸成功后把内存里的已装清单一起改掉，否则关掉弹窗再打开还是旧状态。
+function syncInstalled(app, on) {
+  if (!S.report || !app) return;
+  S.report.apps = Array.isArray(S.report.apps) ? S.report.apps : [];
+  const has = appInstalled(app, S.report.apps);
+  if (on && !has) S.report.apps.push({ name: app.name });
+  if (!on && has) S.report.apps = S.report.apps.filter((a) => !app.match.test(String((a && a.name) || '')));
+  if (S.report.counts) S.report.counts.apps = S.report.apps.length;
+  try { S.analysis = buildFindings(S.report); } catch {}
+  saveCache(S.report);
+}
 
 // 第二步按用途问不同的问题。答案不直接改系统，只用来把解释和卡片收窄。
 function focusReply(usage, answerText) {
@@ -126,7 +138,13 @@ async function handle(req, res) {
     journal: journal.list(),
   });
 
-  if (p === '/api/catalog') return json(res, { apps: catalogView((S.report && S.report.apps) || []) });
+  if (p === '/api/catalog') {
+    // 体检缓存可能比系统旧：装完/手动装完，先把 winget 当前状态并进来。
+    let fresh = [];
+    try { fresh = (await wingetInstalledNames()).map((name) => ({ name })); } catch {}
+    const all = ((S.report && S.report.apps) || []).concat(fresh);
+    return json(res, { apps: catalogView(all) });
+  }
 
   if (p === '/api/scan' && req.method === 'POST') { scan(); return json(res, { ok: true }); }
   if (p === '/api/scan/status') return json(res, { running: S.scan.running, lines: S.scan.lines, error: S.scan.error, ready: !!S.report });
@@ -271,6 +289,7 @@ async function handle(req, res) {
     let r;
     try { r = await def.run(card.target || {}); } catch (e) { r = { ok: false, detail: e.message }; }
     const entry = journal.append({ action: card.action, title: card.title, target: card.target, ok: !!r.ok, detail: r.detail || '', revert: r.revert || null });
+    if (r.ok && card.action === 'install_app') syncInstalled(appById(card.target && card.target.id), true);
     return json(res, { ok: !!r.ok, detail: r.detail || '', ms: Date.now() - t0, entry });
   }
 
@@ -282,7 +301,10 @@ async function handle(req, res) {
     if (!def || !def.revert) return json(res, { ok: false, detail: '这个动作没有撤销实现' }, 400);
     const t0 = Date.now();
     const r = await def.revert(entry.revert);
-    if (r.ok) journal.update(id, { undone: true, undoneAt: Date.now() });
+    if (r.ok) {
+      journal.update(id, { undone: true, undoneAt: Date.now() });
+      if (entry.action === 'install_app') syncInstalled(appById(entry.target && entry.target.id), false);
+    }
     return json(res, { ok: r.ok, detail: r.detail, ms: Date.now() - t0 });
   }
 

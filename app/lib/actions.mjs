@@ -1,7 +1,7 @@
 // 动作库：每个动作 = 描述 + 执行 + 撤销。
 // 硬规矩：没有 revert 的动作不许进 L1（可一键执行的那一档）。
 import { spawn } from 'node:child_process';
-import { appById } from './catalog.mjs';
+import { INSTALL_APPS, appById } from './catalog.mjs';
 
 const PS_PRE = "[Console]::OutputEncoding=[Text.Encoding]::UTF8; $ProgressPreference='SilentlyContinue'; ";
 
@@ -25,6 +25,14 @@ async function wingetListed(id) {
   const out = String(r.out || '');
   if (/No installed package found|找不到已安装|未找到已安装/i.test(out)) return false;
   return out.includes(id);
+}
+
+// 一次 winget list 拿到当前真实已装，避免只信上次体检的缓存。
+export async function wingetInstalledNames() {
+  const r = await runPS('winget list --accept-source-agreements 2>&1 | Out-String', 60000);
+  const out = String(r.out || '');
+  if (!out || /No installed package found|找不到已安装|未找到已安装/i.test(out)) return [];
+  return INSTALL_APPS.filter((a) => out.includes(a.id)).map((a) => a.name);
 }
 
 // 有的安装包（比如网易云）自带的 UnInstall.exe 不认 winget 的静默参数，
