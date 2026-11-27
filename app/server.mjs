@@ -41,6 +41,15 @@ const S = { report: null, analysis: null, step: 0, facts: {}, history: [], lastC
 
 const IDENTITY = '我是这个工具里的本地助手，跑在你这台机器上：读体检结果、解释每张卡是干什么的、能不能退。不是通用聊天机器人——没体检数据的事我不瞎猜。';
 
+// 第二步按用途问不同的问题。答案不直接改系统，只用来把解释和卡片收窄。
+function focusReply(usage, answerText) {
+  const a = String(answerText || '').slice(0, 30);
+  if (usage === 'game') return '明白，' + a + '。打游戏这台先看后台：自启越少，进游戏越干净；显卡驱动和游戏平台我不动，下面几条先把装饰类自启关掉。';
+  if (usage === 'create') return '明白，' + a + '。剪视频 / 做设计主要吃显卡和内存，后台越干净预览和导出越稳；素材盘留出 20% 余量。下面先清装饰类自启，显卡驱动和剪辑软件本身我不动。';
+  if (usage === 'code') return '明白，' + a + '。写代码主要吃内存和多开，开机少几个后台会轻一点。下面先关装饰类自启；VS Code 和 Git 没装的话，左边「装软件」里可以补。';
+  return '明白。下面按你机器的情况列几条。';
+}
+
 function loadCache() {
   try {
     const r = JSON.parse(fs.readFileSync(CACHE, 'utf8'));
@@ -133,7 +142,8 @@ async function handle(req, res) {
     const usageGuess = /大学生|学生|上课|作业|论文|考研|学习|自习/.test(q) ? 'study'
       : /打游戏|游戏|开黑/.test(q) ? 'game'
       : /剪视频|剪辑|设计|画画/.test(q) ? 'create'
-      : /写代码|编程|代码|开发/.test(q) ? 'code' : '';
+      : /写代码|编程|代码|开发/.test(q) ? 'code'
+      : /什么都干|都干|啥都干/.test(q) ? 'all' : '';
     if (S.step === 0 && !S.facts.usage && usageGuess) S.facts.usage = usageGuess;
 
     // 办公套件留哪个：整段对话里任何时候说都算数，卡片会跟着换
@@ -176,7 +186,11 @@ async function handle(req, res) {
       return json(res, out);
     }
 
-    if (changed) {
+    const focusAnswer = !!(!changed && S.step === 1 && ['game', 'create', 'code'].includes(S.facts.usage) && !S.facts.focus && q && !qlike && !identity);
+    if (focusAnswer) {
+      S.facts.focus = q;
+      out = { say: focusReply(S.facts.usage, q), cards: buildCards({ facts: S.facts }, S.report, S.analysis) };
+    } else if (changed) {
       const label = pick === 'wps' ? 'WPS' : pick === 'office' ? 'Office' : '';
       const head = pick === 'none'
         ? '好，三个办公套件都留着，这块我不动。'

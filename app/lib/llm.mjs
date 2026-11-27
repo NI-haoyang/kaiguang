@@ -126,6 +126,25 @@ export function localStep(state, report, analysis) {
   }
 
   if (state.step === 1) {
+    const usage = (state.facts || {}).usage || '';
+    if (usage === 'game') {
+      return {
+        say: '明白，打游戏。第二个问题就跟你这台机器有关了：打游戏最怕开机一堆后台在跑，进游戏前先占掉内存和磁盘。',
+        ask: { question: '主要玩什么？', chips: ['网游 / 联机', '3A 大作', '都玩'] },
+      };
+    }
+    if (usage === 'create') {
+      return {
+        say: '明白，剪视频 / 做设计。第二个问题跟你的用法有关：这类活主要吃显卡和内存，后台越干净，预览和导出越稳。',
+        ask: { question: '主要用哪套？', chips: ['剪映', 'Adobe 全家桶', '达芬奇', '还没定'] },
+      };
+    }
+    if (usage === 'code') {
+      return {
+        say: '明白，写代码。第二个问题跟你的用法有关：写代码主要吃内存和多开，开机自启越少，开 IDE 和浏览器越轻。',
+        ask: { question: '主要写哪一类？', chips: ['前端 / 全栈', '后端 / 服务', '嵌入式 / 硬件', '都写'] },
+      };
+    }
     const dup = byId.dup_office;
     if (dup) {
       return {
@@ -179,7 +198,9 @@ export function buildCards(state, report, a) {
     }
   }
   const dup = byId.dup_office;
-  if (dup && (state.facts || {}).office !== 'none') {
+  const usage = (state.facts || {}).usage || '';
+  const wantsOffice = !usage || usage === 'study' || usage === 'all' || !!(state.facts || {}).office;
+  if (dup && wantsOffice && (state.facts || {}).office !== 'none') {
     const want = (state.facts && state.facts.office) || '';
     let keep = dup.items[0];
     if (want === 'wps') keep = dup.items.find(n => /WPS/i.test(n)) || keep;
